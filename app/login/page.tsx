@@ -18,7 +18,13 @@ function LoginForm() {
   // Redirect if already signed in
   useEffect(() => {
     if (user) {
-      const redirectTo = searchParams?.get('redirect') || '/dashboard';
+      let redirectTo = searchParams?.get('redirect') || '/dashboard';
+      
+      // Prevent redirecting to auth-related pages to avoid loops
+      if (redirectTo.startsWith('/auth') || redirectTo.startsWith('/login')) {
+        redirectTo = '/dashboard';
+      }
+      
       router.push(redirectTo);
     }
   }, [user, router, searchParams]);
@@ -29,7 +35,13 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const redirect = searchParams?.get('redirect') || '/dashboard';
+      let redirect = searchParams?.get('redirect') || '/dashboard';
+      
+      // Prevent redirecting to auth-related pages to avoid loops
+      if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
+        redirect = '/dashboard';
+      }
+      
       const response = await fetch('/api/auth/send-magic-link', {
         method: 'POST',
         headers: {

@@ -15,7 +15,13 @@ function CallbackHandler() {
   useEffect(() => {
     // Once user is signed in, redirect to the intended destination
     if (user && !isVerifying) {
-      const redirect = searchParams?.get('redirect') || '/dashboard';
+      let redirect = searchParams?.get('redirect') || '/dashboard';
+      
+      // Prevent redirecting to auth-related pages to avoid loops
+      if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
+        redirect = '/dashboard';
+      }
+      
       router.push(redirect);
     }
   }, [user, isVerifying, searchParams, router]);
@@ -24,7 +30,12 @@ function CallbackHandler() {
     const verifyAndSignIn = async () => {
       const email = searchParams?.get('email');
       const code = searchParams?.get('code');
-      const redirect = searchParams?.get('redirect') || '/dashboard';
+      let redirect = searchParams?.get('redirect') || '/dashboard';
+      
+      // Prevent redirecting to auth-related pages to avoid loops
+      if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
+        redirect = '/dashboard';
+      }
 
       if (!email || !code) {
         setError('Invalid magic link. Missing email or code.');
@@ -34,6 +45,10 @@ function CallbackHandler() {
 
       // If already signed in, just redirect
       if (user) {
+        // Prevent redirecting to auth-related pages to avoid loops
+        if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
+          redirect = '/dashboard';
+        }
         router.push(redirect);
         setIsVerifying(false);
         return;

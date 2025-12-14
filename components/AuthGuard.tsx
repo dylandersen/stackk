@@ -12,8 +12,14 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !user) {
-      // Store the intended destination
-      const redirectTo = pathname && pathname !== '/' ? pathname : '/dashboard';
+      // Store the intended destination, but don't redirect to auth pages
+      let redirectTo = pathname && pathname !== '/' ? pathname : '/dashboard';
+      
+      // Prevent redirecting to auth-related pages to avoid loops
+      if (redirectTo.startsWith('/auth') || redirectTo.startsWith('/login')) {
+        redirectTo = '/dashboard';
+      }
+      
       router.push(`/login?redirect=${encodeURIComponent(redirectTo)}`);
     }
   }, [isLoading, user, router, pathname]);
