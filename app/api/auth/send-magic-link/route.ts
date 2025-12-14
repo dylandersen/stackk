@@ -12,28 +12,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate magic code using InstantDB
-    // Note: @instantdb/react's sendMagicCode sends an email but doesn't return the code.
-    // To create custom magic links, we need @instantdb/admin which provides generateMagicCode.
-    // 
-    // For production, install @instantdb/admin:
-    //   pnpm add @instantdb/admin
-    // Then use db.auth.generateMagicCode({ email }) which returns the code without sending an email.
-    let code: string;
-    const auth = db.auth as any;
-    if (typeof auth.generateMagicCode === 'function') {
-      // Use generateMagicCode if available (from @instantdb/admin)
-      const result = await auth.generateMagicCode({ email });
-      code = result.code;
-    } else {
-      // sendMagicCode doesn't return the code, so we can't create a custom magic link
-      // In this case, just use InstantDB's default email flow
-      await db.auth.sendMagicCode({ email });
-      return NextResponse.json({ 
-        success: true,
-        message: 'Magic code sent via InstantDB. Please check your email for the code.'
-      });
-    }
+    // Generate magic code using InstantDB Admin SDK
+    // This generates a code without sending an email, allowing us to create a custom magic link
+    const result = await db.auth.generateMagicCode(email);
+    const code = result.code;
 
     // Create magic link with code embedded
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
@@ -65,11 +47,8 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Dynamic import with type assertion to handle optional dependency
-        // @ts-ignore - resend is an optional dependency
-        const resendModule = await import('resend');
-        const resend = resendModule.default;
-        const resendClient = new resend({ apiKey: RESEND_API_KEY });
+        const { Resend } = await import('resend');
+        const resendClient = new Resend(RESEND_API_KEY);
 
         await resendClient.emails.send({
           from: process.env.FROM_EMAIL || 'Stackk <[email protected]>',

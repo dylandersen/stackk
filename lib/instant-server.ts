@@ -1,19 +1,25 @@
-// Server-side InstantDB instance
-// Note: For production with custom email sending, consider using @instantdb/admin
-// which has better support for generateMagicCode
-// Install with: pnpm add @instantdb/admin
-// Then use db.auth.generateMagicCode({ email }) instead, which doesn't send an email.
-import { init } from "@instantdb/react";
+// Server-side InstantDB instance using @instantdb/admin
+// This provides access to generateMagicCode for custom email sending
+import { init } from "@instantdb/admin";
 import schema from "../instant.schema";
 
 const appId = process.env.NEXT_PUBLIC_INSTANT_APP_ID;
+const adminToken = process.env.INSTANT_APP_ADMIN_TOKEN;
 
 if (!appId) {
   throw new Error("NEXT_PUBLIC_INSTANT_APP_ID is not set");
 }
 
+if (!adminToken) {
+  throw new Error(
+    "INSTANT_APP_ADMIN_TOKEN is not set. Get your admin token from https://instantdb.com/dash\n" +
+    "The admin token is required for server-side operations like generateMagicCode."
+  );
+}
+
 const db = init({
   appId,
+  adminToken,
   schema,
 });
 
