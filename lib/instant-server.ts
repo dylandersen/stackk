@@ -3,24 +3,48 @@
 import { init } from "@instantdb/admin";
 import schema from "../instant.schema";
 
-const appId = process.env.NEXT_PUBLIC_INSTANT_APP_ID;
-const adminToken = process.env.INSTANT_APP_ADMIN_TOKEN;
+let dbInstance: ReturnType<typeof init> | null = null;
 
-if (!appId) {
-  throw new Error("NEXT_PUBLIC_INSTANT_APP_ID is not set");
+function getDb() {
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  const appId = process.env.NEXT_PUBLIC_INSTANT_APP_ID;
+  const adminToken = process.env.INSTANT_APP_ADMIN_TOKEN;
+
+  if (!appId) {
+    throw new Error("NEXT_PUBLIC_INSTANT_APP_ID is not set");
+  }
+
+  if (!adminToken) {
+    throw new Error(
+      "INSTANT_APP_ADMIN_TOKEN is not set. Get your admin token from https://instantdb.com/dash\n" +
+      "The admin token is required for server-side operations like generateMagicCode."
+    );
+  }
+
+  dbInstance = init({
+    appId,
+    adminToken,
+    schema,
+  });
+
+  return dbInstance;
 }
 
-if (!adminToken) {
-  throw new Error(
-    "INSTANT_APP_ADMIN_TOKEN is not set. Get your admin token from https://instantdb.com/dash\n" +
-    "The admin token is required for server-side operations like generateMagicCode."
-  );
-}
-
-const db = init({
-  appId,
-  adminToken,
-  schema,
+// Lazy initialization: only initialize when actually accessed
+// This prevents build-time errors when env vars aren't available
+// During build, Next.js analyzes the module but doesn't execute the function
+const db = new Proxy({} as ReturnType<typeof init>, {
+  get(_target, prop) {
+    const instance = getDb();
+    const value = (instance as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(instance);
+    }
+    return value;
+  }
 });
 
 export default db;
