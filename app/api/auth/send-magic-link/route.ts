@@ -46,12 +46,19 @@ export async function POST(request: NextRequest) {
         throw new Error('RESEND_API_KEY is not configured');
       }
 
+      const fromEmail = process.env.FROM_EMAIL || 'Stackk <[email protected]>';
+      if (!process.env.FROM_EMAIL) {
+        console.warn('FROM_EMAIL not set, using default. Make sure to verify your sender email in Resend.');
+      }
+
       try {
         const { Resend } = await import('resend');
         const resendClient = new Resend(RESEND_API_KEY);
 
-        await resendClient.emails.send({
-          from: process.env.FROM_EMAIL || 'Stackk <[email protected]>',
+        console.log('Sending email via Resend:', { from: fromEmail, to: email });
+        
+        const result = await resendClient.emails.send({
+          from: fromEmail,
           to: email,
           subject: 'Sign in to Stackk',
           html: `
@@ -73,9 +80,27 @@ export async function POST(request: NextRequest) {
           `,
           text: `Sign in to Stackk\n\nClick this link to sign in: ${magicLink}\n\nThis link will expire in 15 minutes.`,
         });
+
+        console.log('Resend response:', JSON.stringify(result, null, 2));
+        
+        if (result.error) {
+          console.error('Resend API error:', result.error);
+          const errorMessage = result.error.message || JSON.stringify(result.error);
+          throw new Error(`Failed to send email: ${errorMessage}. Make sure your sender email is verified in Resend.`);
+        }
+        
+        if (!result.data || !result.data.id) {
+          console.error('Unexpected Resend response:', result);
+          throw new Error('Failed to send email: Unexpected response from Resend API');
+        }
+        
+        console.log('Email sent successfully. Resend email ID:', result.data.id);
       } catch (importError: any) {
         console.error('Failed to import or use resend:', importError);
-        throw new Error('Resend package is not installed. Install it with: pnpm add resend');
+        if (importError.message?.includes('Resend API error')) {
+          throw importError;
+        }
+        throw new Error(`Failed to send email: ${importError.message || 'Unknown error'}`);
       }
     }
 
