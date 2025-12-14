@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import db from '@/lib/instant';
@@ -8,34 +8,43 @@ import db from '@/lib/instant';
 function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = db.useAuth();
+  const { user, isLoading: authLoading } = db.useAuth();
   const [error, setError] = useState('');
   const [isVerifying, setIsVerifying] = useState(true);
+  const [hasAttemptedSignIn, setHasAttemptedSignIn] = useState(false);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Once user is signed in, redirect to the intended destination
-    if (user && !isVerifying) {
-      let redirect = searchParams?.get('redirect') || '/dashboard';
-      
-      // Prevent redirecting to auth-related pages to avoid loops
-      if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
-        redirect = '/dashboard';
+    // Once user is signed in and we're done verifying, redirect to dashboard
+    if (user && !isVerifying && !authLoading && hasAttemptedSignIn) {
+      // Clear fallback timeout since we have a user
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = null;
       }
       
-      router.push(redirect);
+      // Always redirect to dashboard after authentication
+      const redirect = '/dashboard';
+      
+      // Add a delay and refresh to ensure auth state is fully propagated
+      // This prevents AuthGuard from seeing an unauthenticated user
+      setTimeout(() => {
+        // Force Next.js to refresh the router state
+        router.refresh();
+        // Then redirect after a brief moment
+        setTimeout(() => {
+          router.push(redirect);
+        }, 200);
+      }, 1000);
     }
-  }, [user, isVerifying, searchParams, router]);
+  }, [user, isVerifying, authLoading, hasAttemptedSignIn, router]);
 
   useEffect(() => {
     const verifyAndSignIn = async () => {
       const email = searchParams?.get('email');
       const code = searchParams?.get('code');
-      let redirect = searchParams?.get('redirect') || '/dashboard';
-      
-      // Prevent redirecting to auth-related pages to avoid loops
-      if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
-        redirect = '/dashboard';
-      }
+      // Always redirect to dashboard after authentication
+      const redirect = '/dashboard';
 
       if (!email || !code) {
         setError('Invalid magic link. Missing email or code.');
@@ -43,37 +52,52 @@ function CallbackHandler() {
         return;
       }
 
-      // If already signed in, just redirect
+      // If already signed in, just redirect to dashboard
       if (user) {
-        // Prevent redirecting to auth-related pages to avoid loops
-        if (redirect.startsWith('/auth') || redirect.startsWith('/login')) {
-          redirect = '/dashboard';
-        }
         router.push(redirect);
         setIsVerifying(false);
         return;
       }
 
       try {
-        console.log('Verifying magic code for:', email);
-        // Sign in using the magic code
-        await db.auth.signInWithMagicCode({ email, code });
+        console.log('Verifying magic code for:', email, 'code:', code);
+        // Sign in using the magic code - ensure code is a string
+        await db.auth.signInWithMagicCode({ email, code: String(code) });
         console.log('Magic code verified successfully');
         
-        // Mark verification as complete - user state will update and trigger redirect
+        // Mark that we've attempted sign-in - wait for user state to update
+        setHasAttemptedSignIn(true);
         setIsVerifying(false);
+        
+        // Give the auth state a moment to update, then check again
+        // The useEffect above will handle the redirect once user is set
+        
+        // Fallback: if user state doesn't update within 5 seconds, try redirecting anyway
+        // This handles cases where auth state propagation is delayed
+        fallbackTimeoutRef.current = setTimeout(() => {
+          // Always redirect to dashboard
+          console.warn('User state not updated after sign-in, forcing hard redirect to dashboard');
+          window.location.href = '/dashboard';
+        }, 5000);
       } catch (err: any) {
         console.error('Error verifying magic link:', err);
+        // Clear fallback timeout on error
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
+        }
         setError(err.body?.message || err.message || 'Invalid or expired magic link. Please request a new one.');
         setIsVerifying(false);
+        setHasAttemptedSignIn(true);
       }
     };
 
     // Only run if we haven't verified yet and user isn't already signed in
-    if (!user && isVerifying) {
+    // Also wait for auth to finish loading before attempting sign-in
+    if (!user && isVerifying && !authLoading && !hasAttemptedSignIn) {
       verifyAndSignIn();
     }
-  }, [searchParams, router, user, isVerifying]);
+  }, [searchParams, router, user, isVerifying, authLoading, hasAttemptedSignIn]);
 
   if (error) {
     return (
