@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@instantdb/admin": "^0.22.87",
     "@instantdb/react": "^0.22.87",
     "framer-motion": "^12.23.26",
     "geist": "^1.5.1",
