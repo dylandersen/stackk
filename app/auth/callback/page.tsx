@@ -15,7 +15,7 @@ function CallbackHandler() {
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // Once user is signed in and we're done verifying, redirect to dashboard
+    // Once user is signed in and we're done verifying, redirect to dashboard immediately
     if (user && !isVerifying && !authLoading && hasAttemptedSignIn) {
       // Clear fallback timeout since we have a user
       if (fallbackTimeoutRef.current) {
@@ -23,19 +23,8 @@ function CallbackHandler() {
         fallbackTimeoutRef.current = null;
       }
       
-      // Always redirect to dashboard after authentication
-      const redirect = '/dashboard';
-      
-      // Add a delay and refresh to ensure auth state is fully propagated
-      // This prevents AuthGuard from seeing an unauthenticated user
-      setTimeout(() => {
-        // Force Next.js to refresh the router state
-        router.refresh();
-        // Then redirect after a brief moment
-        setTimeout(() => {
-          router.push(redirect);
-        }, 200);
-      }, 1000);
+      // Redirect immediately - auth state is ready
+      router.push('/dashboard');
     }
   }, [user, isVerifying, authLoading, hasAttemptedSignIn, router]);
 
@@ -72,13 +61,13 @@ function CallbackHandler() {
         // Give the auth state a moment to update, then check again
         // The useEffect above will handle the redirect once user is set
         
-        // Fallback: if user state doesn't update within 5 seconds, try redirecting anyway
+        // Fallback: if user state doesn't update within 2 seconds, try redirecting anyway
         // This handles cases where auth state propagation is delayed
         fallbackTimeoutRef.current = setTimeout(() => {
           // Always redirect to dashboard
           console.warn('User state not updated after sign-in, forcing hard redirect to dashboard');
           window.location.href = '/dashboard';
-        }, 5000);
+        }, 2000);
       } catch (err: any) {
         console.error('Error verifying magic link:', err);
         // Clear fallback timeout on error
@@ -144,8 +133,8 @@ function CallbackHandler() {
             className="object-contain animate-pulse"
           />
         </div>
-        <h1 className="text-2xl font-bold text-white mb-2">Verifying your magic link...</h1>
-        <p className="text-text-secondary">Please wait while we sign you in.</p>
+        <h1 className="text-2xl font-bold text-white mb-2">Signing you in...</h1>
+        <p className="text-text-secondary">This will only take a moment.</p>
       </div>
     </div>
   );

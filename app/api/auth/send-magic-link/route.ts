@@ -26,9 +26,7 @@ export async function POST(request: NextRequest) {
     const callbackUrl = new URL('/auth/callback', baseUrl);
     callbackUrl.searchParams.set('email', email);
     callbackUrl.searchParams.set('code', code);
-    if (redirect) {
-      callbackUrl.searchParams.set('redirect', redirect);
-    }
+    // Always redirect to dashboard - no need to pass redirect param
 
     const magicLink = callbackUrl.toString();
 
