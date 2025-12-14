@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, AlertTriangle } from 'lucide-react';
-import { Service } from '../types';
+import { Service } from '@/types';
 
 const MotionDiv = motion.div as any;
 
@@ -20,7 +20,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, onClick, featured = 
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`relative overflow-hidden rounded-card p-5 cursor-pointer flex flex-col justify-between ${featured ? 'aspect-[2/1] md:aspect-[2.5/1]' : 'aspect-[3/2]'}`}
+      className={`relative overflow-hidden rounded-card p-5 cursor-pointer flex flex-col justify-between ${featured ? 'aspect-[3.03/1] md:aspect-[3.78/1]' : 'aspect-[2.27/1]'}`}
       style={{ backgroundColor: service.color }}
     >
        {/* Background noise texture overlay */}

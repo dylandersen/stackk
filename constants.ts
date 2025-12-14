@@ -5,7 +5,7 @@ export const SERVICE_COLORS = {
   vercel: '#000000',
   supabase: '#3ECF8E',
   openai: '#10A37F',
-  cursor: '#2563EB', // Blue
+  cursor: '#14120B',
   claude: '#D97757', // Terracotta
   appwrite: '#FD366E',
   namecheap: '#DE3723',
@@ -13,9 +13,6 @@ export const SERVICE_COLORS = {
   resend: '#171717', // Dark Grey
   railway: '#B026FF',
 };
-
-// Helper for consistent logos
-const getLogo = (domain: string) => `https://logo.clearbit.com/${domain}`;
 
 export const MOCK_SERVICES: Service[] = [
   {
@@ -27,7 +24,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-01',
     color: SERVICE_COLORS.vercel,
-    logo: getLogo('vercel.com'),
+    logo: '/logos/vercel.svg',
     usageMetric: 'Bandwidth',
     usageCurrent: 85,
     usageLimit: 100,
@@ -44,7 +41,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-05',
     color: SERVICE_COLORS.openai,
-    logo: getLogo('openai.com'),
+    logo: '/logos/openai.svg',
     usageMetric: 'Spending Limit',
     usageCurrent: 84.20,
     usageLimit: 120.00,
@@ -61,7 +58,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-02-28',
     color: SERVICE_COLORS.supabase, 
-    logo: getLogo('supabase.com'),
+    logo: '/logos/supabase.svg',
     usageMetric: 'Database Size',
     usageCurrent: 6.2,
     usageLimit: 8.0,
@@ -78,7 +75,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-10',
     color: SERVICE_COLORS.cursor,
-    logo: getLogo('cursor.sh'),
+    logo: '/logos/cursor.svg',
     status: 'active',
     connected: true,
   },
@@ -91,7 +88,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-15',
     color: SERVICE_COLORS.claude, 
-    logo: getLogo('anthropic.com'),
+    logo: '/logos/anthropic.svg',
     usageMetric: 'Spend Limit',
     usageCurrent: 12.50,
     usageLimit: 50.00,
@@ -108,7 +105,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-02',
     color: SERVICE_COLORS.resend,
-    logo: getLogo('resend.com'),
+    logo: '/logos/resend.svg',
     usageMetric: 'Emails',
     usageCurrent: 45000,
     usageLimit: 50000,
@@ -125,7 +122,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'yearly',
     nextPayment: '2024-06-12',
     color: SERVICE_COLORS.namecheap,
-    logo: getLogo('namecheap.com'),
+    logo: '/logos/namecheap.svg',
     status: 'active',
     connected: true,
   },
@@ -138,7 +135,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-20',
     color: SERVICE_COLORS.appwrite,
-    logo: getLogo('appwrite.io'),
+    logo: '/logos/appwrite.svg',
     usageMetric: 'Bandwidth',
     usageCurrent: 120,
     usageLimit: 1000,
@@ -155,7 +152,7 @@ export const MOCK_SERVICES: Service[] = [
     billingCycle: 'monthly',
     nextPayment: '2024-03-01',
     color: SERVICE_COLORS.gemini,
-    logo: getLogo('google.com'), // Fallback as gemini specific url might be tricky, usually google generic
+    logo: '/logos/googlegemini.svg',
     usageMetric: 'Queries',
     usageCurrent: 15430,
     usageLimit: 100000,

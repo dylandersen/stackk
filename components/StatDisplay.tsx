@@ -15,10 +15,10 @@ const StatDisplay: React.FC<StatDisplayProps> = ({ amount, label, change, curren
   return (
     <div className="flex flex-col">
       <span className="text-text-secondary font-body text-sm md:text-base mb-1">{label}</span>
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3" style={{ fontFamily: '"__nextjs-Geist Mono"' }}>
         <div className="flex items-start font-primary font-bold text-white leading-none">
           <span className={`${large ? 'text-3xl md:text-4xl' : 'text-2xl'} mt-1 opacity-80`}>{currency}</span>
-          <span className={`${large ? 'text-6xl md:text-7xl' : 'text-4xl'} tracking-tight`}>
+          <span className={`${large ? 'text-6xl md:text-7xl' : 'text-4xl'} tracking-tight`} style={{ fontFamily: '"__nextjs-Geist Mono"' }}>
             {Math.floor(amount)}
           </span>
           <span className={`${large ? 'text-3xl md:text-4xl' : 'text-2xl'} mt-1 opacity-60 font-mono`}>
