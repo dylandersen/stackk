@@ -13,6 +13,14 @@ function CallbackHandler() {
   const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
+    // Once user is signed in, redirect to the intended destination
+    if (user && !isVerifying) {
+      const redirect = searchParams?.get('redirect') || '/dashboard';
+      router.push(redirect);
+    }
+  }, [user, isVerifying, searchParams, router]);
+
+  useEffect(() => {
     const verifyAndSignIn = async () => {
       const email = searchParams?.get('email');
       const code = searchParams?.get('code');
@@ -24,28 +32,33 @@ function CallbackHandler() {
         return;
       }
 
+      // If already signed in, just redirect
+      if (user) {
+        router.push(redirect);
+        setIsVerifying(false);
+        return;
+      }
+
       try {
+        console.log('Verifying magic code for:', email);
         // Sign in using the magic code
         await db.auth.signInWithMagicCode({ email, code });
+        console.log('Magic code verified successfully');
         
-        // Redirect will happen via the useEffect when user state updates
-        router.push(redirect);
+        // Mark verification as complete - user state will update and trigger redirect
+        setIsVerifying(false);
       } catch (err: any) {
         console.error('Error verifying magic link:', err);
-        setError(err.body?.message || 'Invalid or expired magic link. Please request a new one.');
+        setError(err.body?.message || err.message || 'Invalid or expired magic link. Please request a new one.');
         setIsVerifying(false);
       }
     };
 
-    // If user is already signed in, redirect
-    if (user) {
-      const redirect = searchParams?.get('redirect') || '/dashboard';
-      router.push(redirect);
-      return;
+    // Only run if we haven't verified yet and user isn't already signed in
+    if (!user && isVerifying) {
+      verifyAndSignIn();
     }
-
-    verifyAndSignIn();
-  }, [searchParams, router, user]);
+  }, [searchParams, router, user, isVerifying]);
 
   if (error) {
     return (

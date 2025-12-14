@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const code = result.code;
 
     // Create magic link with code embedded
+    // Prefer NEXT_PUBLIC_APP_URL for production, fallback to VERCEL_URL for preview deployments
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
                     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
                     'http://localhost:3000');
@@ -46,9 +47,12 @@ export async function POST(request: NextRequest) {
         throw new Error('RESEND_API_KEY is not configured');
       }
 
-      const fromEmail = process.env.FROM_EMAIL || 'Stackk <[email protected]>';
-      if (!process.env.FROM_EMAIL) {
-        console.warn('FROM_EMAIL not set, using default. Make sure to verify your sender email in Resend.');
+      const fromEmail = process.env.FROM_EMAIL;
+      if (!fromEmail) {
+        throw new Error(
+          'FROM_EMAIL environment variable is required. ' +
+          'Set it to a verified email address from your Resend domain, e.g., "Stackk <[email protected]>" or "[email protected]"'
+        );
       }
 
       try {
