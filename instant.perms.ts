@@ -25,6 +25,14 @@ const rules = {
       delete: "auth.id == data.userId",
     },
   },
+  profiles: {
+    allow: {
+      view: "auth.id == data.userId",
+      create: "auth.id != null && auth.id == data.userId",
+      update: "auth.id == data.userId",
+      delete: "auth.id == data.userId",
+    },
+  },
 } satisfies InstantRules;
 
 export default rules;

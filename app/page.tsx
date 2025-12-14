@@ -6,23 +6,39 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { 
   ArrowRight, Terminal, PlayCircle, BarChart2, 
-  ShieldCheck, Zap, GitBranch, Activity, Code2, 
+  ShieldCheck, Zap, Activity, Code2, 
   AlertTriangle, LayoutGrid, Layers, Bell, Settings,
-  Plus, ChevronRight, Github, Twitter, Linkedin
+  Plus, ChevronRight, Github, Twitter, Linkedin, Check
 } from 'lucide-react';
+import { Accordion } from '@/components/ui/accordion';
 
 const MotionDiv = motion.div;
 const MotionSection = motion.section;
 
 export default function LandingPage() {
   const heroRef = useRef<HTMLDivElement>(null);
+  const demoRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
     offset: ['start start', 'end start']
   });
 
-  const opacity = useTransform(scrollYProgress, [0, 1], [1, 0]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1, 0.95]);
+  // Reduce animation complexity on mobile - disable parallax on small screens
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const opacity = useTransform(scrollYProgress, [0, 1], [1, isMobile ? 1 : 0]);
+  const scale = useTransform(scrollYProgress, [0, 1], [1, isMobile ? 1 : 0.95]);
+
+  const scrollToDemo = () => {
+    demoRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // Card carousel state
   const [currentCardIndex, setCurrentCardIndex] = React.useState(0);
@@ -151,10 +167,10 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="hidden md:block text-sm font-medium text-text-secondary hover:text-white transition-colors">
+            <Link href="/login" className="hidden md:block text-sm font-medium text-text-secondary hover:text-white transition-colors">
               Sign in
             </Link>
-            <Link href="/services/add" className="relative group">
+            <Link href="/signup" className="relative group">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-200" />
               <div className="relative flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
                 <span>Get Started</span>
@@ -190,7 +206,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-5xl md:text-7xl font-primary font-black tracking-tight leading-[1.1] mb-6 text-white"
+              className="text-4xl md:text-7xl font-primary font-black tracking-tight leading-[1.1] mb-6 text-white"
             >
               Track your subscriptions.<br />
               <span className="text-gradient-primary">Never miss a payment.</span>
@@ -212,25 +228,29 @@ export default function LandingPage() {
               className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
             >
               <Link
-                href="/services/add"
-                className="flex items-center justify-center gap-2 bg-white text-background px-8 py-4 rounded-xl font-bold text-sm hover:scale-[1.02] transition-transform"
+                href="/signup"
+                className="flex items-center justify-center gap-2 bg-white text-background px-6 py-4 md:px-8 rounded-xl font-bold text-sm hover:scale-[1.02] transition-transform min-h-[48px]"
               >
                 <Terminal size={18} />
-                Start Tracking
+                Track Your Stack Free
               </Link>
-              <button className="flex items-center justify-center gap-2 bg-surface border border-border text-text-secondary hover:text-white hover:border-white/20 px-8 py-4 rounded-xl font-semibold text-sm transition-all">
+              <button 
+                onClick={scrollToDemo}
+                className="flex items-center justify-center gap-2 bg-surface border border-border text-text-secondary hover:text-white hover:border-white/20 px-6 py-4 md:px-8 rounded-xl font-semibold text-sm transition-all min-h-[48px]"
+              >
                 <PlayCircle size={18} />
-                Watch Demo
+                See How It Works
               </button>
             </motion.div>
           </MotionDiv>
 
-          {/* macOS Desktop App Mockup */}
+          {/* macOS Desktop App Mockup - Desktop Only */}
           <motion.div
+            ref={demoRef}
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="relative max-w-6xl mx-auto perspective-[2000px] group"
+            className="relative max-w-6xl mx-auto perspective-[2000px] group hidden md:block mb-20"
           >
             <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full opacity-50" />
 
@@ -423,7 +443,7 @@ export default function LandingPage() {
                             price: '$84.20',
                             limit: '$120.00 limit',
                             usage: 70,
-                            color: '#D97757', // Terracotta
+                            color: '#D97757',
                             logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/Claude_AI_symbol.svg/1024px-Claude_AI_symbol.svg.png',
                             bg: 'bg-[#D97757]'
                           },
@@ -534,7 +554,118 @@ export default function LandingPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* Mobile Demo Preview */}
+          <motion.div
+            ref={demoRef}
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            className="relative max-w-6xl mx-auto md:hidden mb-20"
+          >
+            <div className="relative bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden p-6">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Your Dashboard</h3>
+                <p className="text-text-secondary text-sm">Track all your subscriptions in one place</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-background/50 border border-border rounded-xl p-4">
+                  <div className="text-text-secondary text-xs mb-2">Total Spend</div>
+                  <div className="text-2xl font-bold text-white">$142.20</div>
+                </div>
+                <div className="bg-background/50 border border-border rounded-xl p-4">
+                  <div className="text-text-secondary text-xs mb-2">Services</div>
+                  <div className="text-2xl font-bold text-white">9</div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {['Vercel Pro', 'Supabase', 'OpenAI API'].map((service, i) => (
+                  <div key={i} className="bg-background/50 border border-border rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-white font-semibold text-sm">{service}</span>
+                      <span className="text-text-secondary text-xs">Active</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
         </div>
+
+        {/* Logo Carousel Section */}
+          <MotionSection
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: '-100px' }}
+            className="max-w-7xl mx-auto px-6 mb-20"
+          >
+            {/* Logo Carousel */}
+            <motion.div
+              variants={itemVariants}
+              className="mb-16 overflow-hidden relative"
+            >
+              <div className="flex gap-12 md:gap-16 relative overflow-hidden">
+                {(() => {
+                  const logos = [
+                    { name: 'anthropic', path: '/logos/anthropic.svg' },
+                    { name: 'openai', path: '/logos/openai.svg' },
+                    { name: 'notion', path: '/logos/notion.svg' },
+                    { name: 'vercel', path: '/logos/vercel.svg' },
+                    { name: 'supabase', path: '/logos/supabase.svg' },
+                    { name: 'cursor', path: '/logos/cursor.svg' },
+                    { name: 'planetscale', path: '/logos/planetscale.svg' },
+                    { name: 'railway', path: '/heroLogos/railway-logo_svgstack_com_29161765741503.svg' },
+                  ];
+                  
+                  // Calculate approximate width: (logo width + gap) * number of logos
+                  const logoWidth = 160;
+                  const gap = 64;
+                  const totalWidth = (logoWidth + gap) * logos.length;
+                  
+                  return (
+                    <motion.div 
+                      className="flex gap-12 md:gap-16 items-center flex-shrink-0"
+                      animate={{
+                        x: [0, -totalWidth],
+                      }}
+                      transition={{
+                        x: {
+                          repeat: Infinity,
+                          repeatType: "loop",
+                          duration: 40,
+                          ease: "linear",
+                        },
+                      }}
+                    >
+                      {/* Render sets side by side for seamless loop */}
+                      {[...Array(2)].map((_, setIndex) => (
+                        <div
+                          key={setIndex}
+                          className="flex gap-12 md:gap-16 items-center flex-shrink-0"
+                        >
+                          {logos.map((logo, i) => (
+                            <div
+                              key={`${setIndex}-${i}`}
+                              className="flex-shrink-0 flex items-center justify-center h-6 md:h-8 w-auto opacity-60 hover:opacity-100 transition-opacity"
+                            >
+                              <Image
+                                src={logo.path}
+                                alt=""
+                                width={160}
+                                height={64}
+                                className="h-6 md:h-8 w-auto object-contain filter brightness-0 invert"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </motion.div>
+                  );
+                })()}
+              </div>
+            </motion.div>
+          </MotionSection>
 
         {/* Features Grid */}
         <MotionSection
@@ -600,57 +731,134 @@ export default function LandingPage() {
           </div>
         </MotionSection>
 
-        {/* Integrations Section */}
-        <div className="max-w-7xl mx-auto px-6 mt-32" id="integrations">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px] md:h-[500px]">
-            <div className="md:col-span-2 flashlight-card p-0 relative group">
-              <div className="absolute inset-0 bg-noise opacity-20 pointer-events-none" />
-              <div className="p-8 relative z-10">
-                <div className="inline-flex items-center gap-2 px-2 py-1 rounded bg-orange-500/10 border border-orange-500/20 text-primary text-xs font-mono mb-4">
-                  <GitBranch size={12} />
-                  Integrations
+        {/* FAQ Section */}
+        <MotionSection
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-100px' }}
+          className="max-w-4xl mx-auto px-6 mt-32"
+          id="faq"
+        >
+          <motion.h2
+            variants={itemVariants}
+            className="text-3xl md:text-4xl font-primary font-bold text-center mb-12 text-white"
+          >
+            Frequently Asked <span className="text-gradient-primary">Questions</span>
+          </motion.h2>
+          <motion.div variants={itemVariants}>
+            <Accordion type="single" className="bg-surface border border-border rounded-xl p-6">
+              <Accordion.Item value="services" title="What services do you support?">
+                <div className="mt-2 text-sm text-text-secondary">
+                  We support 100+ popular developer tools including Vercel, Supabase, OpenAI, Anthropic, Railway, PlanetScale, and many more. You can also manually add any subscription or service we don't have built-in support for.
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-2">Connect Your Services</h3>
-                <p className="text-text-secondary max-w-sm">
-                  Link your accounts and automatically track subscriptions, usage, and payments from popular dev tools.
-                </p>
-              </div>
-              <div className="absolute bottom-0 right-0 w-3/4 h-3/4 overflow-hidden">
-                <div className="w-full h-full bg-gradient-to-tl from-surface-hover to-transparent rounded-tl-[100px] border-t border-l border-white/5 flex items-end justify-end p-8">
-                  <div className="w-full h-48 bg-[#0A0A0B] rounded-xl border border-border p-4 font-mono text-xs text-gray-500 shadow-2xl translate-y-4 translate-x-4 group-hover:translate-y-0 group-hover:translate-x-0 transition-transform duration-500">
-                    <div className="flex gap-1.5 mb-3">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/20" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/20" />
-                    </div>
-                    <p><span className="text-purple-400">const</span> services = <span className="text-yellow-300">await</span> connect();</p>
-                    <p><span className="text-purple-400">if</span> (services.length {'>'} 0) {'{'}</p>
-                    <p className="pl-4">track(<span className="text-green-400">'all'</span>);</p>
-                    <p>{'}'}</p>
-                  </div>
+              </Accordion.Item>
+              <Accordion.Item value="free-tier" title="How does the free tier work?">
+                <div className="mt-2 text-sm text-text-secondary">
+                  The free tier includes basic subscription tracking, up to 10 services, usage monitoring, and email alerts. Perfect for indie developers and small projects. No credit card required.
+                </div>
+              </Accordion.Item>
+              <Accordion.Item value="security" title="Is my API key data secure?">
+                <div className="mt-2 text-sm text-text-secondary">
+                  Absolutely. All API keys and sensitive data are encrypted at rest and in transit. We use industry-standard security practices and never store your credentials in plain text. Your data is only used to fetch usage metrics and is never shared with third parties.
+                </div>
+              </Accordion.Item>
+              <Accordion.Item value="cancel" title="Can I cancel anytime?">
+                <div className="mt-2 text-sm text-text-secondary">
+                  Yes, you can cancel your Pro subscription at any time with no questions asked. Your account will remain active until the end of your billing period, and you can continue using the free tier indefinitely.
+                </div>
+              </Accordion.Item>
+            </Accordion>
+          </motion.div>
+        </MotionSection>
+
+        {/* Pricing Preview Section */}
+        <MotionSection
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: '-100px' }}
+          className="max-w-5xl mx-auto px-6 mt-32"
+          id="pricing"
+        >
+          <motion.h2
+            variants={itemVariants}
+            className="text-3xl md:text-4xl font-primary font-bold text-center mb-12 text-white"
+          >
+            Simple, Transparent <span className="text-gradient-primary">Pricing</span>
+          </motion.h2>
+          <motion.div
+            variants={itemVariants}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {/* Free Plan */}
+            <div className="flashlight-card p-8 rounded-xl border border-border bg-surface">
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Free</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-white">$0</span>
+                  <span className="text-text-secondary">/forever</span>
                 </div>
               </div>
+              <ul className="space-y-4 mb-8">
+                {[
+                  'Basic subscription tracking',
+                  'Up to 10 services',
+                  'Usage monitoring',
+                  'Email alerts',
+                  'Community support'
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <Check size={20} className="text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-text-secondary text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="block w-full text-center bg-surface border border-border hover:border-primary/50 text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all min-h-[48px] flex items-center justify-center"
+              >
+                Start Free
+              </Link>
             </div>
 
-            <div className="flashlight-card p-0 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent to-primary/5 pointer-events-none" />
-              <div className="p-8">
-                <h3 className="text-xl font-bold text-white mb-2">Mobile Ready</h3>
-                <p className="text-text-secondary text-xs">Manage subscriptions on the go.</p>
+            {/* Pro Plan */}
+            <div className="flashlight-card p-8 rounded-xl border-2 border-primary bg-surface relative overflow-hidden">
+              <div className="absolute top-4 right-4 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
+                Popular
               </div>
-              <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 w-32 h-64 bg-[#0A0A0B] border border-border rounded-t-3xl shadow-2xl p-2">
-                <div className="w-full h-full bg-surface rounded-t-2xl overflow-hidden relative">
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 w-8 h-1 bg-black rounded-full" />
-                  <div className="mt-8 px-2 space-y-2">
-                    <div className="h-8 bg-white/5 rounded w-full" />
-                    <div className="h-16 bg-primary/10 rounded w-full border border-primary/20" />
-                    <div className="h-8 bg-white/5 rounded w-full" />
-                  </div>
+              <div className="mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">Pro</h3>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-bold text-white">$5</span>
+                  <span className="text-text-secondary">/month</span>
                 </div>
               </div>
+              <ul className="space-y-4 mb-8">
+                {[
+                  'Unlimited services',
+                  'Advanced analytics',
+                  'Priority support',
+                  'API access',
+                  'Custom alerts',
+                  'Export data'
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <Check size={20} className="text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-text-secondary text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/signup"
+                className="block w-full text-center bg-primary hover:bg-primary-hover text-white px-6 py-3 rounded-xl font-semibold text-sm transition-all shadow-lg shadow-primary/25 min-h-[48px] flex items-center justify-center"
+              >
+                Go Pro - $5/mo
+              </Link>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </MotionSection>
+
 
         {/* CTA Section */}
         <div className="max-w-3xl mx-auto px-6 mt-32 text-center">
@@ -671,10 +879,10 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link
-              href="/services/add"
-              className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/25 transition-all w-full sm:w-auto"
+              href="/signup"
+              className="bg-primary hover:bg-primary-hover text-white px-6 py-4 md:px-8 md:py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/25 transition-all w-full sm:w-auto min-h-[48px] flex items-center justify-center"
             >
-              Get Started for Free
+              Track Your Stack Free
             </Link>
             <div className="text-text-secondary text-sm font-mono">
               <span className="text-primary">{'>'}</span> Track your first service

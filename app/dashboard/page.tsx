@@ -7,11 +7,10 @@ import db from '@/lib/instant';
 
 export default function Dashboard() {
   const { data, isLoading } = db.useQuery({ 
-    services: {},
-    transactions: {
-      service: {},
+    services: {
+      transactions: {},
     },
-  });
+  } as any) as { data: any; isLoading: boolean };
 
   const servicesWithUsage = useMemo(() => {
     if (!data?.services) return [];
@@ -19,10 +18,18 @@ export default function Dashboard() {
   }, [data]);
 
   const recentTransactions = useMemo(() => {
-    if (!data?.transactions) return [];
-    return data.transactions
+    if (!data?.services) return [];
+    // Flatten all transactions from all services and add the service reference
+    const allTransactions = data.services
+      .flatMap((service: any) => 
+        (service.transactions || []).map((transaction: any) => ({
+          ...transaction,
+          service,
+        }))
+      )
       .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 5);
+    return allTransactions;
   }, [data]);
 
   const topService = servicesWithUsage[0];

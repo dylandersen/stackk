@@ -33,11 +33,25 @@ const _schema = i.schema({
       enabled: i.boolean(),
       userId: i.string(), // User ID
     }),
+    profiles: i.entity({
+      firstName: i.string(),
+      lastName: i.string(),
+      // Referral source tracking for analytics dashboard
+      // Structured values: 'friend_family', 'x', 'instagram', 'youtube', 'tiktok', 'google', 'reddit', 'product_hunt', 'other'
+      // Query example for dashboard: filter profiles by referralSource and count
+      // Example: { profiles: { $: { where: { referralSource: 'x' } } } }
+      referralSource: i.string(),
+      userId: i.string(), // User ID for linking to $users
+    }),
   },
   links: {
     serviceTransactions: {
       forward: { on: "services", has: "many", label: "transactions" },
       reverse: { on: "transactions", has: "one", label: "service" },
+    },
+    profileUser: {
+      forward: { on: "profiles", has: "one", label: "$user" },
+      reverse: { on: "$users" as any, has: "one", label: "profile" },
     },
   },
 });

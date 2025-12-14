@@ -9,10 +9,11 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
   const isLoginPage = pathname === '/login';
+  const isSignupPage = pathname === '/signup';
   const isAuthCallback = pathname?.startsWith('/auth');
 
   // Exclude auth-related pages from AuthGuard
-  if (isLandingPage || isLoginPage || isAuthCallback) {
+  if (isLandingPage || isLoginPage || isSignupPage || isAuthCallback) {
     return <>{children}</>;
   }
 
