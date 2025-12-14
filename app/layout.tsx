@@ -8,6 +8,11 @@ import { InstantDBProvider } from '@/components/InstantDBProvider';
 export const metadata: Metadata = {
   title: 'Stackk | Track Your Developer Subscriptions',
   description: 'The developer-first platform for tracking subscriptions, monitoring usage, and managing all your dev tool spending in one beautiful dashboard.',
+  icons: {
+    icon: '/stackk.png',
+    shortcut: '/stackk.png',
+    apple: '/stackk.png',
+  },
 };
 
 export default function RootLayout({
