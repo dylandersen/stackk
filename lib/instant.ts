@@ -12,4 +12,8 @@ const db = init({
   schema,
 });
 
+// Note: Permissions (rules) should be configured via the InstantDB dashboard
+// or API. The rules file (instant.perms.ts) is kept for reference.
+// See: https://www.instantdb.com/docs/permissions
+
 export default db;

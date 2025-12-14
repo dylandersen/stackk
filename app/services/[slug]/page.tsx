@@ -32,7 +32,14 @@ export default function ServiceDetail() {
   
   const service = useMemo(() => {
     if (!data?.services) return null;
-    return data.services.find((s: any) => (s.slug || createSlug(s.name)) === slug);
+    const found = data.services.find((s: any) => (s.slug || createSlug(s.name)) === slug);
+    if (!found) return null;
+    // Type assertion to match Service interface
+    return {
+      ...found,
+      billingCycle: found.billingCycle as 'monthly' | 'yearly',
+      status: found.status as 'active' | 'paused' | 'canceled',
+    };
   }, [data, slug]);
 
   if (isLoading) return <div className="p-8 text-center">Loading...</div>;

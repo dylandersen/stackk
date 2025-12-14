@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import db from '@/lib/instant';
 import ServiceCard from '@/components/ServiceCard';
+import { Service } from '@/types';
 import { createSlug } from '@/utils/slug';
 
 const MotionDiv = motion.div as any;
@@ -19,9 +20,15 @@ export default function ServicesList() {
   const filteredServices = useMemo(() => {
     if (!data?.services) return [];
     const services = data.services;
-    return filter === 'All' 
+    const filtered = filter === 'All' 
       ? services 
       : services.filter((s: any) => s.category === filter);
+    // Type assertion to match Service interface
+    return filtered.map((s: any) => ({
+      ...s,
+      billingCycle: s.billingCycle as 'monthly' | 'yearly',
+      status: s.status as 'active' | 'paused' | 'canceled',
+    }));
   }, [data, filter]);
 
   return (
@@ -71,7 +78,7 @@ export default function ServicesList() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredServices.map((service: any, index: number) => (
+            {filteredServices.map((service, index: number) => (
               <MotionDiv
                 key={service.id}
                 initial={{ opacity: 0, y: 20 }}

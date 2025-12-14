@@ -4,7 +4,7 @@ const rules = {
   services: {
     allow: {
       view: "auth.id == data.userId",
-      create: "auth.id != null",
+      create: "auth.id != null && auth.id == data.userId",
       update: "auth.id == data.userId",
       delete: "auth.id == data.userId",
     },
@@ -12,7 +12,7 @@ const rules = {
   transactions: {
     allow: {
       view: "auth.id == data.userId",
-      create: "auth.id != null",
+      create: "auth.id != null && auth.id == data.userId",
       update: "auth.id == data.userId",
       delete: "auth.id == data.userId",
     },
@@ -20,7 +20,7 @@ const rules = {
   notification_channels: {
     allow: {
       view: "auth.id == data.userId",
-      create: "auth.id != null",
+      create: "auth.id != null && auth.id == data.userId",
       update: "auth.id == data.userId",
       delete: "auth.id == data.userId",
     },

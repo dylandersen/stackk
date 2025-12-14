@@ -3,9 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname } from 'next/navigation';
-import { LayoutGrid, Layers, Bell, Settings, Plus } from 'lucide-react';
-import { MOCK_SERVICES } from '@/constants';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutGrid, Layers, Bell, Settings, Plus, LogOut } from 'lucide-react';
+import db from '@/lib/instant';
 
 const NavItem = ({ to, icon, label, active }: { to: string; icon: React.ReactNode; label: string; active: boolean }) => {
   return (
@@ -27,14 +27,36 @@ const NavItem = ({ to, icon, label, active }: { to: string; icon: React.ReactNod
 
 export const Navigation = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const user = db.useUser();
+  const { data } = db.useQuery({ services: {} });
   
   const isActive = (path: string) => pathname === path;
   
   if (!pathname) return null;
 
-  // Calculate total spend
-  const totalSpent = MOCK_SERVICES.reduce((acc, s) => acc + s.price + (s.usageCurrent && s.usageUnit === '$' ? s.usageCurrent : 0), 0);
-  const totalSpentPercentage = 65; // Mock percentage
+  // Calculate total spend from user's services
+  const totalSpent = data?.services?.reduce((acc: number, s: any) => {
+    const basePrice = s.price || 0;
+    const usageCost = (s.usageCurrent && s.usageUnit === '$') ? s.usageCurrent : 0;
+    return acc + basePrice + usageCost;
+  }, 0) || 0;
+  
+  const totalSpentPercentage = 65; // Mock percentage for now
+
+  const handleSignOut = async () => {
+    try {
+      await db.auth.signOut();
+      router.push('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Get user initials for avatar
+  const getUserInitials = (email: string) => {
+    return email.substring(0, 2).toUpperCase();
+  };
 
   return (
     <>
@@ -75,8 +97,8 @@ export const Navigation = () => {
           <NavItem to="/settings" icon={<Settings size={18} />} label="Settings" active={isActive('/settings')} />
         </div>
 
-        <div className="mt-auto">
-          <div className="p-3 rounded-xl bg-surface border border-white/5 mb-4">
+        <div className="mt-auto space-y-4">
+          <div className="p-3 rounded-xl bg-surface border border-white/5">
             <div className="flex justify-between items-center mb-2">
               <span className="text-xs text-text-secondary font-mono">Total Spend</span>
               <span className="text-xs text-white font-mono">${totalSpent.toFixed(2)}</span>
@@ -85,10 +107,31 @@ export const Navigation = () => {
               <div className="h-full bg-gradient-to-r from-primary to-yellow-500" style={{ width: `${totalSpentPercentage}%` }} />
             </div>
           </div>
+          
           <Link href="/services/add" className="w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-3 py-2 rounded-lg transition-all flex items-center justify-center gap-2">
             <Plus size={16} />
             <span className="font-secondary">Add Service</span>
           </Link>
+
+          {/* User Profile Section */}
+          <div className="pt-4 border-t border-border">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                {user?.email ? getUserInitials(user.email) : 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-white truncate">{user?.email || 'User'}</p>
+                <p className="text-xs text-text-secondary">Account</p>
+              </div>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <LogOut size={16} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </div>
     </>

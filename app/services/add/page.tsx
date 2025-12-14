@@ -84,11 +84,10 @@ export default function AddService() {
         };
       });
 
-      db.transact(
-        ...serviceData.map(service => 
-          db.tx.services[service.id].update(service)
-        )
+      const transactions = serviceData.map(service => 
+        db.tx.services[service.id].update(service)
       );
+      db.transact(...(transactions as Parameters<typeof db.transact>));
 
       router.push('/services');
     } catch (error) {

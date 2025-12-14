@@ -3,8 +3,9 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
-  Wallet, ArrowRight, Terminal, PlayCircle, BarChart2, 
+  ArrowRight, Terminal, PlayCircle, BarChart2, 
   ShieldCheck, Zap, GitBranch, Activity, Code2, 
   AlertTriangle, LayoutGrid, Layers, Bell, Settings,
   Plus, ChevronRight, Github, Twitter, Linkedin
@@ -133,9 +134,13 @@ export default function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <Wallet size={20} strokeWidth={2} />
-            </div>
+            <Image 
+              src="/stackk.png" 
+              alt="Stackk" 
+              width={40} 
+              height={40} 
+              className="object-contain group-hover:scale-105 transition-transform duration-300"
+            />
             <span className="font-secondary font-semibold text-xl tracking-tight text-white">Stackk</span>
           </Link>
 
@@ -247,8 +252,14 @@ export default function LandingPage() {
                 <div className="w-48 border-r border-border bg-surface flex flex-col">
                   <div className="px-4 py-5 border-b border-border">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center">
-                        <Wallet size={16} className="text-primary" />
+                      <div className="w-7 h-7 rounded-lg bg-primary/20 flex items-center justify-center p-1.5">
+                        <Image 
+                          src="/stackk.png" 
+                          alt="Stackk" 
+                          width={20} 
+                          height={20} 
+                          className="object-contain"
+                        />
                       </div>
                       <span className="font-secondary font-bold text-base text-white tracking-wide">Stackk</span>
                     </div>
@@ -678,8 +689,14 @@ export default function LandingPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-white">
-                  <Wallet size={12} />
+                <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center p-1">
+                  <Image 
+                    src="/stackk.png" 
+                    alt="Stackk" 
+                    width={20} 
+                    height={20} 
+                    className="object-contain"
+                  />
                 </div>
                 <span className="font-secondary font-bold text-white">Stackk</span>
               </div>

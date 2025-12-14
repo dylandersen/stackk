@@ -1,0 +1,3 @@
+When building new components or pages, always use the context7 mcp server to understand how you should build stuff and use it if you get stuck.
+
+Additionally, please use skeleton loading animations always when building new pages or features. Instead of a pause when navigating to a new page, navigate to the new page and show the skeleton loading anims instead of anything else.
