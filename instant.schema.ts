@@ -19,6 +19,17 @@ const _schema = i.schema({
       connected: i.boolean(),
       slug: i.string(), // URL-friendly identifier
       userId: i.string(), // User ID for multi-user support
+      sortOrder: i.number().optional(), // Custom sort order for drag-and-drop
+      // Vercel integration fields
+      vercelTokenHash: i.string().optional(), // Encrypted/hashed Vercel API token
+      vercelUserId: i.string().optional(), // Vercel user ID
+      vercelTeamId: i.string().optional(), // Primary team ID
+      vercelPlan: i.string().optional(), // Vercel plan name (hobby, pro, enterprise)
+      vercelConnectedAt: i.string().optional(), // ISO timestamp of connection
+      lastSyncedAt: i.string().optional(), // Last successful sync timestamp
+      syncError: i.string().optional(), // Last sync error message
+      vercelDataCache: i.string().optional(), // JSON string of cached Vercel projects/deployments data
+      vercelDataFetchedAt: i.string().optional(), // ISO timestamp when data was last fetched
     }),
     transactions: i.entity({
       date: i.string(), // ISO date string
@@ -42,6 +53,7 @@ const _schema = i.schema({
       // Example: { profiles: { $: { where: { referralSource: 'x' } } } }
       referralSource: i.string(),
       userId: i.string(), // User ID for linking to $users
+      monthlyBudget: i.number().optional(), // Monthly budget in dollars
     }),
   },
   links: {

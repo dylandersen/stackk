@@ -1,7 +1,7 @@
 import { Service, NotificationChannel } from './types';
 import { Activity, Cloud, Music, Play, Box, Database, Video } from 'lucide-react';
 
-export const SERVICE_COLORS = {
+export const SERVICE_COLORS: Record<string, string> = {
   vercel: '#000000',
   supabase: '#3ECF8E',
   openai: '#10A37F',
@@ -12,6 +12,49 @@ export const SERVICE_COLORS = {
   gemini: '#4285F4', // Google Blue
   resend: '#171717', // Dark Grey
   railway: '#B026FF',
+  render: '#46E3B7',
+  cloudflare: '#F38020',
+  planetscale: '#000000',
+  neon: '#00E5FF',
+  turso: '#00E5FF',
+  convex: '#FFD700',
+  drizzle: '#FF6B6B',
+  stripe: '#635BFF',
+  lemonsqueezy: '#FFD700',
+  paddle: '#00C4CC',
+  revenuecat: '#00C4CC',
+  inngest: '#00E5FF',
+  upstash: '#00E5FF',
+  workos: '#635BFF',
+  clerk: '#000000',
+  anthropic: '#D97757',
+  googlegemini: '#4285F4',
+  v0: '#000000',
+  v0dev: '#000000',
+  lovable: '#00E5FF',
+  linear: '#5E6AD2',
+  notion: '#000000',
+  figma: '#F24E1E',
+  excalidraw: '#000000',
+  tldraw: '#000000',
+  sentry: '#362D59',
+  posthog: '#E02424',
+  betterstack: '#000000',
+  fathom: '#000000',
+  plausible: '#5850EC',
+  crisp: '#FF652F',
+  loops: '#000000',
+  dockerdesktop: '#2496ED',
+  jetbrains: '#000000',
+  postman: '#FF6C37',
+  insomnia: '#4000BF',
+  tableplus: '#000000',
+  expo: '#000020',
+  fastlane: '#00F200',
+  doppler: '#00C4CC',
+  gitlab: '#FC6D26',
+  bitbucket: '#0052CC',
+  githubcopilot: '#000000',
 };
 
 export const MOCK_SERVICES: Service[] = [

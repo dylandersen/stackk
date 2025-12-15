@@ -1,40 +1,36 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { ChevronLeft, Calendar, FileText, Power, Pause, BarChart3, Settings } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { ChevronLeft, Calendar, FileText, Settings, RefreshCw, AlertCircle, CheckCircle2, Link2, Link2Off, Server, Clock, BarChart3, Trash2, X } from 'lucide-react';
 import db from '@/lib/instant';
-import ServiceCard from '@/components/ServiceCard';
-import ProgressBar from '@/components/ProgressBar';
 import { createSlug } from '@/utils/slug';
-
-const chartData = [
-  { name: 'Feb 1', val: 20 },
-  { name: 'Feb 5', val: 45 },
-  { name: 'Feb 10', val: 30 },
-  { name: 'Feb 15', val: 70 },
-  { name: 'Feb 20', val: 55 },
-  { name: 'Feb 25', val: 85 },
-  { name: 'Feb 28', val: 80 },
-];
+import VercelSummaryStats from '@/components/VercelSummaryStats';
+import VercelProjectsTable from '@/components/VercelProjectsTable';
+import DeploymentFrequencyChart from '@/components/charts/DeploymentFrequencyChart';
+import ProjectDistributionChart from '@/components/charts/ProjectDistributionChart';
+import type { VercelDataResponse } from '@/app/api/vercel/data/route';
 
 export default function ServiceDetail() {
   const paramsResult = useParams();
-  // Handle both Promise and direct object cases for Next.js 16
   const params = paramsResult instanceof Promise 
     ? React.use(paramsResult)
     : (paramsResult as Record<string, string | string[]> | null);
   const router = useRouter();
   const slug = params?.slug as string | undefined;
   const { data, isLoading } = db.useQuery({ services: {} });
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [vercelData, setVercelData] = useState<VercelDataResponse | null>(null);
+  const [dataError, setDataError] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const service = useMemo(() => {
     if (!data?.services) return null;
     const found = data.services.find((s: any) => (s.slug || createSlug(s.name)) === slug);
     if (!found) return null;
-    // Type assertion to match Service interface
     return {
       ...found,
       billingCycle: found.billingCycle as 'monthly' | 'yearly',
@@ -42,111 +38,628 @@ export default function ServiceDetail() {
     };
   }, [data, slug]);
 
-  if (isLoading) return <div className="p-8 text-center">Loading...</div>;
-  if (!service) return <div className="p-8 text-center">Service not found</div>;
+  const isVercelService = service?.name === 'Vercel' && service?.connected && service?.vercelTokenHash;
+
+  // Redirect if service doesn't exist
+  useEffect(() => {
+    if (!isLoading && data?.services && !service) {
+      router.push('/services');
+    }
+  }, [isLoading, data, service, router]);
+
+  // Load cached data on mount
+  useEffect(() => {
+    if (service?.vercelDataCache && service?.vercelDataFetchedAt) {
+      try {
+        const cachedData = JSON.parse(service.vercelDataCache);
+        setVercelData(cachedData);
+      } catch (error) {
+        console.error('Error parsing cached Vercel data:', error);
+      }
+    }
+  }, [service?.vercelDataCache, service?.vercelDataFetchedAt]);
+
+  const handleSync = async () => {
+    if (!service || !isVercelService || !service.vercelTokenHash) return;
+
+    setIsSyncing(true);
+    setSyncError(null);
+
+    try {
+      const response = await fetch('/api/vercel/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: service.id,
+          encryptedToken: service.vercelTokenHash,
+        }),
+      });
+
+      let result: any = {};
+      
+      try {
+        const text = await response.text();
+        if (text) {
+          result = JSON.parse(text);
+        }
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Invalid response from server. Please try again.');
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to sync data (${response.status})`);
+      }
+
+      if (!result.updates) {
+        throw new Error('No update data received from server');
+      }
+
+      const updates: any = {};
+      Object.keys(result.updates).forEach(key => {
+        if (result.updates[key] !== undefined) {
+          updates[key] = result.updates[key];
+        }
+      });
+      
+      const transaction = db.tx.services[service.id].update(updates);
+      db.transact(transaction);
+    } catch (error: any) {
+      console.error('Error syncing Vercel:', error);
+      setSyncError(error.message || 'Failed to sync data');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const fetchVercelData = async () => {
+    if (!service || !isVercelService || !service.vercelTokenHash) return;
+
+    setIsLoadingData(true);
+    setDataError(null);
+
+    try {
+      const response = await fetch('/api/vercel/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: service.id,
+          encryptedToken: service.vercelTokenHash,
+          teamId: service.vercelTeamId,
+          limit: 100,
+        }),
+      });
+
+      let result: any = {};
+      
+      try {
+        const text = await response.text();
+        if (text) {
+          result = JSON.parse(text);
+        }
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Invalid response from server. Please try again.');
+      }
+
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to fetch data (${response.status})`);
+      }
+
+      if (!result.data) {
+        throw new Error('No data received from server');
+      }
+
+      // Save to state
+      setVercelData(result.data);
+
+      // Persist to database
+      if (service) {
+        const updates: any = {
+          vercelDataCache: JSON.stringify(result.data),
+          vercelDataFetchedAt: new Date().toISOString(),
+        };
+        
+        // Also update plan if provided
+        if (result.plan) {
+          updates.vercelPlan = result.plan;
+        }
+        
+        const transaction = db.tx.services[service.id].update(updates);
+        db.transact(transaction);
+      }
+    } catch (error: any) {
+      console.error('Error fetching Vercel data:', error);
+      setDataError(error.message || 'Failed to fetch Vercel data');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!service || !isVercelService) return;
+
+    if (!confirm('Are you sure you want to disconnect your Vercel account? This will remove all connection data.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/vercel/disconnect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: service.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to disconnect');
+      }
+
+      // Delete the service entirely when disconnecting
+      const transaction = db.tx.services[service.id].delete();
+      db.transact(transaction);
+      
+      // Clear local state
+      setVercelData(null);
+      
+      router.push('/services');
+    } catch (error: any) {
+      console.error('Error disconnecting Vercel:', error);
+      alert(error.message || 'Failed to disconnect Vercel account');
+    }
+  };
+
+  const handleDeleteService = async () => {
+    if (!service) return;
+
+    if (!confirm(`Are you sure you want to delete "${service.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      // Delete the service
+      const transaction = db.tx.services[service.id].delete();
+      db.transact(transaction);
+      
+      // Clear local state
+      setVercelData(null);
+      setShowSettingsModal(false);
+      
+      // Navigate back to services page
+      router.push('/services');
+    } catch (error: any) {
+      console.error('Error deleting service:', error);
+      alert(error.message || 'Failed to delete service');
+      setIsDeleting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 md:px-8 lg:px-12 py-8 md:py-12">
+        <div className="animate-pulse space-y-8">
+          <div className="h-8 bg-surface rounded w-1/3"></div>
+          <div className="h-32 bg-surface rounded"></div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-24 bg-surface rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!service) {
+    return null; // Will redirect via useEffect
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-8 lg:px-12 py-8 md:py-12">
       <div className="space-y-8 md:space-y-10">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <button onClick={() => router.back()} className="p-2 bg-surface hover:bg-surface-hover rounded-full transition-colors border border-border">
+          <button 
+            onClick={() => router.back()} 
+            className="p-2 bg-surface hover:bg-surface-hover rounded-full transition-colors border border-border"
+          >
             <ChevronLeft size={20} />
           </button>
-          <h1 className="text-xl md:text-2xl font-bold">{service.name}</h1>
-          <button className="p-2 bg-surface hover:bg-surface-hover rounded-full transition-colors border border-border">
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl md:text-2xl font-bold font-secondary">{service.name}</h1>
+            {isVercelService && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/30 rounded-full">
+                <Link2 size={14} className="text-primary" />
+                <span className="text-xs font-medium text-primary">Connected</span>
+              </div>
+            )}
+          </div>
+          <button 
+            onClick={() => setShowSettingsModal(true)}
+            className="p-2 bg-surface hover:bg-surface-hover rounded-full transition-colors border border-border"
+          >
             <Settings size={20} />
           </button>
         </div>
 
         {/* Service Card */}
-        <div className="max-w-4xl mx-auto">
-          <ServiceCard service={service} />
+        <div 
+          className="relative overflow-hidden rounded-card py-3 px-6"
+          style={{ backgroundColor: service.color }}
+        >
+          <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+          
+          <div className="relative z-10 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {service.logo ? (
+                <div className="bg-white rounded-xl p-1 shadow-lg flex-shrink-0">
+                  <img 
+                    src={service.logo} 
+                    alt={service.name} 
+                    className="w-[18px] h-[18px] md:w-6 md:h-6 object-contain rounded-lg"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="bg-white/20 rounded-xl p-1 shadow-lg flex items-center justify-center w-[18px] h-[18px] md:w-6 md:h-6 flex-shrink-0">
+                  <span className="text-white font-bold text-xs md:text-sm">
+                    {service.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <h3 className="text-white font-bold text-base md:text-lg whitespace-nowrap font-secondary">{service.name}</h3>
+            </div>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <span className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-white font-bold font-mono text-sm md:text-base border border-white/10 whitespace-nowrap">
+                {service.currency}{service.price}
+                <span className="text-white/60 text-xs font-normal ml-1">/{service.billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+              </span>
+              {isVercelService && (service as any).vercelPlan && (
+                <span className="px-3 py-1 rounded-full text-blue-400 font-bold text-xs md:text-sm border border-blue-500/30 whitespace-nowrap capitalize">
+                  {(service as any).vercelPlan}
+                </span>
+              )}
+              {isVercelService && (
+                <>
+                  <button
+                    onClick={fetchVercelData}
+                    disabled={isLoadingData || isSyncing}
+                    className="flex items-center gap-2 px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-white font-bold text-xs md:text-sm border border-primary/30 hover:border-primary/50 disabled:bg-surface disabled:text-text-secondary disabled:border-border transition-all whitespace-nowrap flex-shrink-0"
+                  >
+                    <RefreshCw size={14} className={(isLoadingData || isSyncing) ? 'animate-spin' : ''} />
+                    {isLoadingData ? 'Loading...' : 'Refresh Data'}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          {/* Left Column - Analytics and Usage */}
-          <div className="lg:col-span-2 space-y-6 md:space-y-8">
-            {/* Usage Analytics */}
-            <section className="bg-surface border border-border rounded-card p-6 md:p-8">
-              <div className="flex justify-between items-center mb-6 md:mb-8">
-                <div className="flex items-center gap-2">
-                  <BarChart3 size={20} className="text-primary" />
-                  <h2 className="font-bold text-white text-lg md:text-xl">Analytics</h2>
-                </div>
-                <div className="flex bg-background rounded-lg p-0.5">
-                  <button className="px-3 py-1 bg-surface rounded shadow-sm text-xs font-bold text-white">7D</button>
-                  <button className="px-3 py-1 text-xs font-medium text-text-secondary hover:text-white">30D</button>
+        {/* Error Messages */}
+        {isVercelService && (
+          <>
+            {(service.syncError || syncError) && (
+              <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-800/30 rounded-lg">
+                <AlertCircle size={18} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-400 mb-1">Sync Error</p>
+                  <p className="text-xs text-red-300">{service.syncError || syncError}</p>
                 </div>
               </div>
+            )}
 
-              <div className="h-64 md:h-80 w-full">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <AreaChart data={chartData}>
-                     <defs>
-                       <linearGradient id={`colorVal-${service.id}`} x1="0" y1="0" x2="0" y2="1">
-                         <stop offset="5%" stopColor={service.color} stopOpacity={0.3}/>
-                         <stop offset="95%" stopColor={service.color} stopOpacity={0}/>
-                       </linearGradient>
-                     </defs>
-                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#71717A', fontSize: 10}} />
-                     <Tooltip 
-                       contentStyle={{ backgroundColor: '#1A1A1C', borderColor: '#2A2A2E', borderRadius: '12px', color: '#fff' }}
-                       itemStyle={{ color: '#fff' }}
-                     />
-                     <Area type="monotone" dataKey="val" stroke={service.color} strokeWidth={3} fillOpacity={1} fill={`url(#colorVal-${service.id})`} />
-                   </AreaChart>
-                 </ResponsiveContainer>
+            {dataError && (
+              <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-800/30 rounded-lg">
+                <AlertCircle size={18} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-400 mb-1">Data Fetch Error</p>
+                  <p className="text-xs text-red-300">{dataError}</p>
+                </div>
               </div>
-            </section>
+            )}
+          </>
+        )}
 
-            {/* Configuration */}
-            {service.usageMetric && (
-              <section className="bg-surface border border-border rounded-card p-6 md:p-8 space-y-6">
-                 <h2 className="font-bold text-white text-lg md:text-xl">Usage Limit</h2>
-                 <ProgressBar current={service.usageCurrent!} max={service.usageLimit!} unit={service.usageUnit} />
-                 <div className="pt-4">
-                   <label className="text-xs text-text-secondary mb-3 block">Adjust Threshold</label>
-                   <input type="range" className="w-full accent-primary bg-background h-2 rounded-lg appearance-none cursor-pointer" />
-                 </div>
+        {/* Vercel-specific content */}
+        {isVercelService ? (
+          <>
+            {/* Summary Statistics */}
+            {vercelData && (
+              <VercelSummaryStats statistics={vercelData.statistics} />
+            )}
+
+            {/* Loading State */}
+            {isLoadingData && !vercelData && (
+              <div className="space-y-6">
+                {/* Summary Stats Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="bg-surface border border-border rounded-card p-6 animate-pulse">
+                      <div className="h-4 bg-background rounded w-1/2 mb-4"></div>
+                      <div className="h-8 bg-background rounded w-1/3"></div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Charts Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                  {[1, 2].map(i => (
+                    <div key={i} className="bg-surface border border-border rounded-card p-6 md:p-8 animate-pulse">
+                      <div className="h-6 bg-background rounded w-1/3 mb-6"></div>
+                      <div className="h-64 md:h-80 bg-background rounded"></div>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Table Skeleton */}
+                <div className="bg-surface border border-border rounded-card p-6 md:p-8 animate-pulse">
+                  <div className="h-6 bg-background rounded w-1/4 mb-6"></div>
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className="h-16 bg-background rounded"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Charts Section */}
+            {vercelData && (vercelData.statistics.deploymentFrequency.length > 0 || Object.keys(vercelData.statistics.frameworkDistribution).length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                {vercelData.statistics.deploymentFrequency.length > 0 && (
+                  <section className="relative bg-surface border border-border rounded-card p-6 md:p-8 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-6">
+                        <BarChart3 size={20} className="text-primary" />
+                        <h2 className="font-bold text-white text-lg md:text-xl font-secondary">Deployment Frequency</h2>
+                      </div>
+                      <DeploymentFrequencyChart 
+                        data={vercelData.statistics.deploymentFrequency}
+                        color={service.color}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {Object.keys(vercelData.statistics.frameworkDistribution).length > 0 && (
+                  <section className="relative bg-surface border border-border rounded-card p-6 md:p-8 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-6">
+                        <BarChart3 size={20} className="text-primary" />
+                        <h2 className="font-bold text-white text-lg md:text-xl font-secondary">Framework Distribution</h2>
+                      </div>
+                      <ProjectDistributionChart 
+                        data={vercelData.statistics.frameworkDistribution}
+                      />
+                    </div>
+                  </section>
+                )}
+              </div>
+            )}
+
+            {/* Projects Table */}
+            {vercelData && vercelData.projects.length > 0 && (
+              <section className="relative bg-surface border border-border rounded-card p-6 md:p-8 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                <div className="relative z-10">
+                  <h2 className="font-bold text-white text-lg md:text-xl mb-6 font-secondary">Projects</h2>
+                  <VercelProjectsTable 
+                    projects={vercelData.projects}
+                    deployments={vercelData.deployments}
+                  />
+                </div>
               </section>
             )}
-          </div>
 
-          {/* Right Column - Info and Actions */}
-          <div className="space-y-6 md:space-y-8">
-            {/* Info Grid */}
-            <div className="grid grid-cols-1 gap-4 md:gap-6">
-               <div className="bg-surface border border-border rounded-card p-5 md:p-6">
-                  <span className="text-text-secondary text-xs flex items-center gap-2 mb-3">
-                     <Calendar size={14} /> Next Payment
-                  </span>
-                  <p className="text-white font-bold text-lg">{new Date(service.nextPayment).toLocaleDateString()}</p>
-               </div>
-               <div className="bg-surface border border-border rounded-card p-5 md:p-6">
-                  <span className="text-text-secondary text-xs flex items-center gap-2 mb-3">
-                     <FileText size={14} /> Plan
-                  </span>
-                  <p className="text-white font-bold text-lg">Pro Tier</p>
-               </div>
+            {/* Empty State - No data fetched yet */}
+            {!isLoadingData && !vercelData && !dataError && (
+              <div className="relative bg-surface border border-border rounded-card p-8 text-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                <div className="relative z-10">
+                  <p className="text-text-secondary mb-4">Click "Refresh Data" to load your Vercel projects and deployments</p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Non-Vercel Service Content */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+            <div className="lg:col-span-2 space-y-6 md:space-y-8">
+              <section className="relative bg-surface border border-border rounded-card p-6 md:p-8 overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                <div className="relative z-10">
+                  <h2 className="font-bold text-white text-lg md:text-xl mb-4 font-secondary">Service Information</h2>
+                  <p className="text-text-secondary">Connect this service to see detailed analytics and usage data.</p>
+                </div>
+              </section>
             </div>
 
-            {/* Danger Zone */}
-            <div className="space-y-3 md:space-y-4">
-               <button className="w-full py-3 md:py-4 bg-surface border border-border text-white font-medium rounded-btn hover:bg-white/5 transition-all flex items-center justify-center gap-2">
-                 <Pause size={18} />
-                 Pause Subscription
-               </button>
-               <button className="w-full py-3 md:py-4 bg-danger/10 border border-danger/30 text-danger font-medium rounded-btn hover:bg-danger/20 transition-all flex items-center justify-center gap-2">
-                 <Power size={18} />
-                 Cancel Subscription
-               </button>
+            <div className="space-y-6 md:space-y-8">
+              <div className="grid grid-cols-1 gap-4 md:gap-6">
+                <div className="relative bg-surface border border-border rounded-card p-5 md:p-6 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                  <div className="relative z-10">
+                    <span className="text-text-secondary text-xs flex items-center gap-2 mb-3">
+                      <Calendar size={14} /> Next Payment
+                    </span>
+                    <p className="text-white font-bold text-lg">
+                      {service.nextPayment 
+                        ? new Date(service.nextPayment).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })
+                        : 'N/A'}
+                    </p>
+                    {service.billingCycle && (
+                      <p className="text-xs text-text-secondary mt-1">
+                        {service.billingCycle === 'yearly' ? 'Annual' : 'Monthly'} billing
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="relative bg-surface border border-border rounded-card p-5 md:p-6 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                  <div className="relative z-10">
+                    <span className="text-text-secondary text-xs flex items-center gap-2 mb-3">
+                      <FileText size={14} /> Plan
+                    </span>
+                    <p className="text-white font-bold text-lg capitalize">
+                      {service.price >= 20 ? 'Pro' : service.price > 0 ? 'Hobby' : 'Free'}
+                    </p>
+                    {service.price > 0 && (
+                      <p className="text-xs text-text-secondary mt-1">
+                        ${service.price.toFixed(2)}/{service.billingCycle === 'yearly' ? 'yr' : 'mo'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Connection Info Cards */}
+        {isVercelService && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="relative bg-surface border border-border rounded-card p-5 md:p-6 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle2 size={16} className="text-green-400" />
+                  <span className="text-text-secondary text-xs font-medium">Status</span>
+                </div>
+                {!service.syncError && !syncError && service.lastSyncedAt ? (
+                  <div className="space-y-1">
+                    <p className="text-white font-bold text-lg font-secondary">Active</p>
+                    <p className="text-xs text-text-secondary">Connection is working properly</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-red-400 font-bold text-lg font-secondary">Error</p>
+                    <p className="text-xs text-red-300">Connection issue detected</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="relative bg-surface border border-border rounded-card p-5 md:p-6 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock size={16} className="text-primary" />
+                  <span className="text-text-secondary text-xs font-medium">Last Synced</span>
+                </div>
+                {service.lastSyncedAt ? (
+                  <div className="space-y-1">
+                    <p className="text-white font-bold text-lg font-secondary">
+                      {new Date(service.lastSyncedAt).toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {new Date(service.lastSyncedAt).toLocaleTimeString('en-US', { 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-white font-bold text-lg font-secondary">Never</p>
+                    <p className="text-xs text-text-secondary">No sync data available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="relative bg-surface border border-border rounded-card p-5 md:p-6 overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Server size={16} className="text-primary" />
+                  <span className="text-text-secondary text-xs font-medium">Team ID</span>
+                </div>
+                {service.vercelTeamId ? (
+                  <div className="space-y-1">
+                    <p className="text-white font-mono text-sm font-bold truncate">{service.vercelTeamId}</p>
+                    <p className="text-xs text-text-secondary">Vercel team identifier</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-white font-bold text-lg">N/A</p>
+                    <p className="text-xs text-text-secondary">No team ID available</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        {isVercelService && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleDisconnect}
+              className="px-4 py-2 bg-danger/10 border border-danger/30 text-danger font-medium rounded-btn hover:bg-danger/20 transition-all flex items-center gap-2"
+            >
+              <Link2Off size={18} />
+              Disconnect Vercel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowSettingsModal(false)}
+        >
+          <div 
+            className="bg-surface border border-border rounded-card p-6 max-w-md w-full shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-white">Settings</h2>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="p-1 hover:bg-background rounded-full transition-colors"
+              >
+                <X size={20} className="text-text-secondary" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={handleDeleteService}
+                disabled={isDeleting}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-danger/10 border border-danger/30 text-danger font-medium rounded-btn hover:bg-danger/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={18} />
+                {isDeleting ? 'Deleting...' : 'Delete Service'}
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
-

@@ -4,6 +4,7 @@ import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { ConditionalLayout } from '@/components/ConditionalLayout';
 import { InstantDBProvider } from '@/components/InstantDBProvider';
+import { AddServiceModalProvider } from '@/contexts/AddServiceModalContext';
 
 export const metadata: Metadata = {
   title: 'Stackk | Track Your Developer Subscriptions',
@@ -24,9 +25,11 @@ export default function RootLayout({
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable} dark`}>
       <body className={GeistSans.className}>
         <InstantDBProvider>
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
+          <AddServiceModalProvider>
+            <ConditionalLayout>
+              {children}
+            </ConditionalLayout>
+          </AddServiceModalProvider>
         </InstantDBProvider>
       </body>
     </html>

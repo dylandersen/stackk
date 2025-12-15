@@ -4,6 +4,8 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { Navigation } from '@/components/Navigation';
 import { AuthGuard } from '@/components/AuthGuard';
+import AddServiceModal from '@/components/AddServiceModal';
+import { useAddServiceModal } from '@/contexts/AddServiceModalContext';
 
 export function ConditionalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,7 +27,13 @@ export function ConditionalLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <AddServiceModalWrapper />
     </AuthGuard>
   );
+}
+
+function AddServiceModalWrapper() {
+  const { isOpen, closeModal } = useAddServiceModal();
+  return <AddServiceModal isOpen={isOpen} onClose={closeModal} />;
 }
 

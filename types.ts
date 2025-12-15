@@ -14,6 +14,8 @@ export interface Service {
   usageUnit?: string;
   status: 'active' | 'paused' | 'canceled';
   connected: boolean;
+  slug?: string;
+  sortOrder?: number;
   transactions?: Transaction[];
 }
 

@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutGrid, Layers, Bell, Settings, Plus, LogOut } from 'lucide-react';
 import db from '@/lib/instant';
+import { useAddServiceModal } from '@/contexts/AddServiceModalContext';
 
 const NavItem = ({ to, icon, label, active }: { to: string; icon: React.ReactNode; label: string; active: boolean }) => {
   return (
@@ -29,20 +30,53 @@ export const Navigation = () => {
   const pathname = usePathname();
   const router = useRouter();
   const user = db.useUser();
-  const { data } = db.useQuery({ services: {} });
+  const { openModal } = useAddServiceModal();
+  const { data } = db.useQuery({ 
+    services: {},
+    profiles: {},
+  });
   
   const isActive = (path: string) => pathname === path;
   
   if (!pathname) return null;
 
-  // Calculate total spend from user's services
-  const totalSpent = data?.services?.reduce((acc: number, s: any) => {
+  // Get user's profile to access monthly budget
+  const profile = data?.profiles?.find((p: any) => p.userId === user?.id);
+  const monthlyBudget = profile?.monthlyBudget || 0;
+
+  // Calculate monthly spend from user's services
+  // For monthly services, use the price directly
+  // For yearly services, divide by 12
+  const monthlySpent = data?.services?.reduce((acc: number, s: any) => {
+    if (s.status !== 'active') return acc;
+    
     const basePrice = s.price || 0;
+    let monthlyPrice = 0;
+    
+    if (s.billingCycle === 'yearly') {
+      monthlyPrice = basePrice / 12;
+    } else {
+      monthlyPrice = basePrice; // monthly or default
+    }
+    
+    // Add usage-based costs if they're in dollars
     const usageCost = (s.usageCurrent && s.usageUnit === '$') ? s.usageCurrent : 0;
-    return acc + basePrice + usageCost;
+    
+    return acc + monthlyPrice + usageCost;
   }, 0) || 0;
   
-  const totalSpentPercentage = 65; // Mock percentage for now
+  // Calculate percentage based on budget (if budget is set)
+  const totalSpentPercentage = monthlyBudget > 0 
+    ? Math.min((monthlySpent / monthlyBudget) * 100, 100)
+    : 0;
+
+  // Format currency to only show decimals when needed
+  const formatCurrency = (amount: number) => {
+    if (amount % 1 === 0) {
+      return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    }
+    return amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
   const handleSignOut = async () => {
     try {
@@ -68,11 +102,14 @@ export const Navigation = () => {
         <Link href="/services" className={`flex flex-col items-center gap-1 ${isActive('/services') || pathname.startsWith('/services/') ? 'text-primary' : 'text-text-secondary'}`}>
           <Layers size={24} strokeWidth={isActive('/services') || pathname.startsWith('/services/') ? 2.5 : 2} />
         </Link>
-        <Link href="/services/add" className="flex flex-col items-center gap-1 -mt-8">
+        <button 
+          onClick={openModal}
+          className="flex flex-col items-center gap-1 -mt-8"
+        >
           <div className="bg-primary hover:bg-primary-hover transition-colors rounded-full p-4 shadow-lg shadow-primary/20 text-white">
              <Plus size={28} />
           </div>
-        </Link>
+        </button>
         <Link href="/alerts" className={`flex flex-col items-center gap-1 ${isActive('/alerts') ? 'text-primary' : 'text-text-secondary'}`}>
           <Bell size={24} strokeWidth={isActive('/alerts') ? 2.5 : 2} />
         </Link>
@@ -98,20 +135,41 @@ export const Navigation = () => {
         </div>
 
         <div className="mt-auto space-y-4">
-          <div className="p-3 rounded-xl bg-surface border border-white/5">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs text-text-secondary font-mono">Total Spend</span>
-              <span className="text-xs text-white font-mono">${totalSpent.toFixed(2)}</span>
+          <Link href="/spend" className="block">
+            <div className="p-3 rounded-xl bg-surface border border-white/5 hover:bg-surface/80 hover:shadow-[0_0_12px_rgba(249,115,22,0.15)] transition-all cursor-pointer">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="text-xs text-text-secondary font-mono flex-shrink-0">Monthly Spend</span>
+                <div className="text-right flex-shrink-0 min-w-0">
+                  <div className="text-xs text-white font-mono font-semibold leading-tight whitespace-nowrap">
+                    ${formatCurrency(monthlySpent)}
+                    {monthlyBudget > 0 && (
+                      <span className="text-text-secondary"> / ${formatCurrency(monthlyBudget)}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {monthlyBudget > 0 ? (
+                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-yellow-500 transition-all duration-300" 
+                    style={{ width: `${totalSpentPercentage}%` }} 
+                  />
+                </div>
+              ) : (
+                <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-white/20" style={{ width: '0%' }} />
+                </div>
+              )}
             </div>
-            <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary to-yellow-500" style={{ width: `${totalSpentPercentage}%` }} />
-            </div>
-          </div>
+          </Link>
           
-          <Link href="/services/add" className="w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-3 py-2 rounded-lg transition-all flex items-center justify-center gap-2">
+          <button 
+            onClick={openModal}
+            className="w-full bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-3 py-2 rounded-lg transition-all flex items-center justify-center gap-2"
+          >
             <Plus size={16} />
             <span className="font-secondary">Add Service</span>
-          </Link>
+          </button>
 
           {/* User Profile Section */}
           <div className="pt-4 border-t border-border">

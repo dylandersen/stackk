@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Check, Plus, X, ChevronLeft, Sparkles } from 'lucide-react';
+import { Search, Check, Plus, X, ChevronLeft, Sparkles, Key, ExternalLink, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { id } from '@instantdb/react';
 import db from '@/lib/instant';
@@ -13,6 +13,7 @@ const MotionDiv = motion.div as any;
 const getLogo = (domain: string) => `https://logo.clearbit.com/${domain}`;
 
 const POPULAR_SERVICES = [
+  { name: 'Vercel', logo: '/logos/vercel.svg', cat: 'Hosting', requiresAuth: true },
   { name: 'GitHub Copilot', logo: getLogo('github.com'), cat: 'Tools' },
   { name: 'Railway', logo: getLogo('railway.app'), cat: 'Hosting' },
   { name: 'AWS', logo: getLogo('aws.amazon.com'), cat: 'Cloud' },
@@ -36,6 +37,10 @@ export default function AddService() {
   const [selected, setSelected] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState('All');
   const [isCreating, setIsCreating] = useState(false);
+  const [showVercelForm, setShowVercelForm] = useState(false);
+  const [vercelToken, setVercelToken] = useState('');
+  const [vercelError, setVercelError] = useState('');
+  const [isConnectingVercel, setIsConnectingVercel] = useState(false);
 
   const filtered = useMemo(() => {
     let services = POPULAR_SERVICES;
@@ -52,10 +57,79 @@ export default function AddService() {
   }, [query, activeCategory]);
 
   const toggleSelect = (name: string) => {
+    const service = POPULAR_SERVICES.find(s => s.name === name);
+    
+    // Special handling for Vercel - show auth form
+    if (service?.requiresAuth && name === 'Vercel') {
+      if (!showVercelForm) {
+        setShowVercelForm(true);
+        setVercelError('');
+        setVercelToken('');
+      }
+      return;
+    }
+    
     if (selected.includes(name)) {
       setSelected(selected.filter(s => s !== name));
     } else {
       setSelected([...selected, name]);
+    }
+  };
+
+  const handleConnectVercel = async () => {
+    if (!user || !vercelToken.trim()) {
+      setVercelError('Please enter your Vercel API token');
+      return;
+    }
+
+    setIsConnectingVercel(true);
+    setVercelError('');
+
+    try {
+      const response = await fetch('/api/vercel/connect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: vercelToken.trim(),
+          userId: user.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to connect Vercel account');
+      }
+
+      // Create service record with the returned data
+      const serviceId = id();
+      
+      // Remove any undefined values (InstantDB doesn't accept undefined)
+      const serviceData: any = {
+        id: serviceId,
+      };
+      
+      // Only include defined values
+      Object.keys(data.service).forEach(key => {
+        if (data.service[key] !== undefined) {
+          serviceData[key] = data.service[key];
+        }
+      });
+
+      const transaction = db.tx.services[serviceId].update(serviceData);
+      db.transact(transaction);
+
+      // Reset form and redirect
+      setShowVercelForm(false);
+      setVercelToken('');
+      router.push('/services');
+    } catch (error: any) {
+      console.error('Error connecting Vercel:', error);
+      setVercelError(error.message || 'Failed to connect Vercel account. Please check your token and try again.');
+    } finally {
+      setIsConnectingVercel(false);
     }
   };
 
@@ -147,6 +221,100 @@ export default function AddService() {
         ))}
       </div>
 
+      {/* Vercel Connection Form */}
+      {showVercelForm && (
+        <div className="mb-6 md:mb-8 p-6 md:p-8 bg-surface border border-border rounded-card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center p-2">
+                <img src="/logos/vercel.svg" alt="Vercel" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <h2 className="font-bold text-white text-lg">Connect Vercel</h2>
+                <p className="text-sm text-text-secondary">Enter your Vercel API token to sync billing and usage data</p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowVercelForm(false);
+                setVercelToken('');
+                setVercelError('');
+              }}
+              className="p-2 rounded-full hover:bg-white/10 transition-colors"
+            >
+              <X size={20} className="text-text-secondary" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">
+                Vercel API Token
+              </label>
+              <div className="relative">
+                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
+                <input
+                  type="password"
+                  value={vercelToken}
+                  onChange={(e) => setVercelToken(e.target.value)}
+                  placeholder="vercel_xxxxxxxxxxxxx"
+                  className="w-full bg-background border border-border rounded-lg py-3 pl-10 pr-4 text-white placeholder-text-secondary focus:outline-none focus:border-primary transition-colors"
+                />
+              </div>
+              <p className="text-xs text-text-secondary mt-2">
+                Get your token from{' '}
+                <a
+                  href="https://vercel.com/account/tokens"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  Vercel Settings
+                  <ExternalLink size={12} />
+                </a>
+              </p>
+            </div>
+
+            {vercelError && (
+              <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-800/30 rounded-lg">
+                <AlertCircle size={18} className="text-red-400 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-400">{vercelError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleConnectVercel}
+                disabled={isConnectingVercel || !vercelToken.trim()}
+                className="flex-1 bg-primary disabled:bg-surface disabled:text-text-secondary disabled:border disabled:border-border hover:bg-primary-hover text-white font-bold py-3 rounded-btn transition-all flex items-center justify-center gap-2"
+              >
+                {isConnectingVercel ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Key size={18} />
+                    Connect Vercel
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => {
+                  setShowVercelForm(false);
+                  setVercelToken('');
+                  setVercelError('');
+                }}
+                className="px-4 py-3 bg-surface border border-border hover:bg-surface-hover text-white rounded-btn transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Services List */}
       <div className="flex-1 overflow-y-auto space-y-3 md:space-y-4 pb-24 md:pb-8">
         {filtered.length === 0 ? (
@@ -166,6 +334,7 @@ export default function AddService() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {filtered.map((service, i) => {
                 const isSelected = selected.includes(service.name);
+                const isVercelActive = service.name === 'Vercel' && showVercelForm;
                 return (
                   <MotionDiv 
                     key={service.name}
@@ -174,7 +343,7 @@ export default function AddService() {
                     transition={{ delay: i * 0.03 }}
                     onClick={() => toggleSelect(service.name)}
                     className={`flex items-center justify-between p-4 md:p-5 rounded-card border cursor-pointer transition-all ${
-                      isSelected 
+                      isSelected || isVercelActive
                         ? 'bg-primary/10 border-primary shadow-lg shadow-primary/10' 
                         : 'bg-surface border-border hover:border-white/20 hover:bg-surface/80'
                     }`}
@@ -185,16 +354,25 @@ export default function AddService() {
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-base md:text-lg">{service.name}</h3>
-                        <p className="text-xs md:text-sm text-text-secondary mt-0.5">{service.cat}</p>
+                        <p className="text-xs md:text-sm text-text-secondary mt-0.5">
+                          {service.cat}
+                          {service.requiresAuth && (
+                            <span className="ml-2 text-primary">• Requires Auth</span>
+                          )}
+                        </p>
                       </div>
                     </div>
                     
                     <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all ${
-                      isSelected 
+                      isSelected || isVercelActive
                         ? 'bg-primary text-white shadow-md' 
                         : 'bg-white/10 text-transparent border border-border'
                     }`}>
-                      <Check size={18} className={isSelected ? 'opacity-100' : 'opacity-0'} />
+                      {service.requiresAuth && isVercelActive ? (
+                        <Key size={18} className="opacity-100" />
+                      ) : (
+                        <Check size={18} className={isSelected ? 'opacity-100' : 'opacity-0'} />
+                      )}
                     </div>
                   </MotionDiv>
                 );
