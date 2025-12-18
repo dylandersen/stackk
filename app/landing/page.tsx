@@ -122,8 +122,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-5xl md:text-7xl font-primary font-black tracking-tight leading-[1.1] mb-6 text-white"
             >
-              Track your subscriptions.<br />
-              <span className="text-gradient-primary">Never miss a payment.</span>
+              What's your stack <span className="text-gradient-primary"><em>actually</em> costing you?</span>
             </motion.h1>
 
             <motion.p
@@ -132,7 +131,7 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed"
             >
-              The developer-first platform for tracking subscriptions, monitoring usage, and managing all your dev tool spending in one beautiful dashboard.
+              Your side projects shouldn't come with surprise bills. Connect your stack, see real-time costs, and get alerts before you cross free tier limits.
             </motion.p>
 
             <motion.div

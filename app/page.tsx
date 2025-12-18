@@ -189,27 +189,14 @@ export default function LandingPage() {
             style={{ opacity, scale }}
             className="flex flex-col items-center text-center max-w-4xl mx-auto mb-20"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-white/5 text-xs font-mono text-primary mb-8"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-              </span>
-              Track all your dev tools in one place
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
               className="text-4xl md:text-7xl font-primary font-black tracking-tight leading-[1.1] mb-6 text-white"
             >
-              Track your subscriptions.<br />
-              <span className="text-gradient-primary">Never miss a payment.</span>
+              What's your stack<br />
+              <span className="text-gradient-primary"><em>actually</em><span className="pl-4 md:pl-6">costing you?</span></span>
             </motion.h1>
 
             <motion.p
@@ -218,7 +205,8 @@ export default function LandingPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed"
             >
-              The developer-first platform for tracking subscriptions, monitoring usage, and managing all your dev tool spending in one beautiful dashboard.
+              Your side projects shouldn't come with surprise bills.<br />
+              Connect your stack, see real-time costs, and get alerts before <br />you get hit by overages.
             </motion.p>
 
             <motion.div
@@ -232,7 +220,7 @@ export default function LandingPage() {
                 className="flex items-center justify-center gap-2 bg-white text-background px-6 py-4 md:px-8 rounded-xl font-bold text-sm hover:scale-[1.02] transition-transform min-h-[48px]"
               >
                 <Terminal size={18} />
-                Track Your Stack Free
+                Start Tracking
               </Link>
               <button 
                 onClick={scrollToDemo}
@@ -605,7 +593,7 @@ export default function LandingPage() {
               variants={itemVariants}
               className="mb-16 overflow-hidden relative"
             >
-              <div className="flex gap-12 md:gap-16 relative overflow-hidden">
+              <div className="relative overflow-hidden">
                 {(() => {
                   const logos = [
                     { name: 'anthropic', path: '/logos/anthropic.svg' },
@@ -618,49 +606,46 @@ export default function LandingPage() {
                     { name: 'railway', path: '/heroLogos/railway-logo_svgstack_com_29161765741503.svg' },
                   ];
                   
-                  // Calculate approximate width: (logo width + gap) * number of logos
-                  const logoWidth = 160;
-                  const gap = 64;
-                  const totalWidth = (logoWidth + gap) * logos.length;
-                  
                   return (
-                    <motion.div 
-                      className="flex gap-12 md:gap-16 items-center flex-shrink-0"
-                      animate={{
-                        x: [0, -totalWidth],
-                      }}
-                      transition={{
-                        x: {
-                          repeat: Infinity,
-                          repeatType: "loop",
-                          duration: 40,
-                          ease: "linear",
-                        },
-                      }}
-                    >
-                      {/* Render sets side by side for seamless loop */}
-                      {[...Array(2)].map((_, setIndex) => (
-                        <div
-                          key={setIndex}
-                          className="flex gap-12 md:gap-16 items-center flex-shrink-0"
-                        >
-                          {logos.map((logo, i) => (
-                            <div
-                              key={`${setIndex}-${i}`}
-                              className="flex-shrink-0 flex items-center justify-center h-6 md:h-8 w-auto opacity-60 hover:opacity-100 transition-opacity"
-                            >
-                              <Image
-                                src={logo.path}
-                                alt=""
-                                width={160}
-                                height={64}
-                                className="h-6 md:h-8 w-auto object-contain filter brightness-0 invert"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                    </motion.div>
+                    <div className="relative w-full">
+                      <motion.div 
+                        className="flex items-center flex-shrink-0"
+                        animate={{
+                          x: ['0%', '-50%'],
+                        }}
+                        transition={{
+                          x: {
+                            repeat: Infinity,
+                            repeatType: "loop",
+                            duration: 30,
+                            ease: "linear",
+                          },
+                        }}
+                      >
+                        {/* Render 2 sets for seamless infinite loop */}
+                        {[...Array(2)].map((_, setIndex) => (
+                          <div
+                            key={setIndex}
+                            className="flex items-center flex-shrink-0 gap-12 md:gap-16 pr-12 md:pr-16"
+                          >
+                            {logos.map((logo, i) => (
+                              <div
+                                key={`${setIndex}-${i}`}
+                                className="flex-shrink-0 flex items-center justify-center h-8 md:h-10 opacity-60 hover:opacity-100 transition-opacity"
+                              >
+                                <Image
+                                  src={logo.path}
+                                  alt=""
+                                  width={160}
+                                  height={64}
+                                  className="h-8 md:h-10 w-auto object-contain filter brightness-0 invert"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </motion.div>
+                    </div>
                   );
                 })()}
               </div>

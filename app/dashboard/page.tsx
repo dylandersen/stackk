@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Bell, ChevronRight, AlertTriangle, Zap, Sparkles, Triangle } from 'lucide-react';
 import Link from 'next/link';
 import db from '@/lib/instant';
+import { createSlug } from '@/utils/slug';
 
 export default function Dashboard() {
   const { data, isLoading } = db.useQuery({ 
@@ -146,44 +147,50 @@ export default function Dashboard() {
                   ? (service.usageCurrent / service.usageLimit) * 100 
                   : 0;
                 const isCritical = percent > 90;
+                const serviceSlug = service.slug || createSlug(service.name);
                 
                 return (
-                  <div 
-                    key={service.id} 
-                    className="p-6 rounded-2xl relative"
-                    style={{ backgroundColor: service.color || '#1A1A1C', border: service.color ? 'none' : '1px solid #2A2A2E' }}
+                  <Link 
+                    key={service.id}
+                    href={`/services/${serviceSlug}`}
+                    className="block"
                   >
-                    {isCritical && (
-                      <div className="absolute top-4 right-4">
-                        <span className="text-xs font-bold text-red-400 bg-red-900/50 px-2 py-1 rounded uppercase">Critical</span>
+                    <div 
+                      className="p-6 rounded-2xl relative cursor-pointer hover:opacity-90 transition-opacity"
+                      style={{ backgroundColor: service.color || '#1A1A1C', border: service.color ? 'none' : '1px solid #2A2A2E' }}
+                    >
+                      {isCritical && (
+                        <div className="absolute top-4 right-4">
+                          <span className="text-xs font-bold text-red-400 bg-red-900/50 px-2 py-1 rounded uppercase">Critical</span>
+                        </div>
+                      )}
+                      <div className={`absolute ${isCritical ? 'top-12' : 'top-4'} right-4 text-white font-mono font-bold`}>
+                        {Math.round(percent)}%
                       </div>
-                    )}
-                    <div className={`absolute ${isCritical ? 'top-12' : 'top-4'} right-4 text-white font-mono font-bold`}>
-                      {Math.round(percent)}%
-                    </div>
-                    <div className="mb-4">
-                      <Zap size={24} className="text-white mb-2" />
-                      <h3 className="text-white font-semibold text-lg mb-1 font-secondary">{service.name}</h3>
-                      <div className="text-white/70 text-xs uppercase tracking-wider">{service.category}</div>
-                    </div>
-                    <div className="text-3xl font-mono font-bold text-white mb-1">
-                      {service.currency}{service.price.toFixed(2)}
-                    </div>
-                    {service.usageCurrent !== undefined && (
-                      <div className="text-white/80 text-sm mb-3">
-                        {service.usageCurrent} {service.usageUnit || ''}
+                      <div className="mb-4">
+                        <Zap size={24} className="text-white mb-2" />
+                        <h3 className="text-white font-semibold text-lg mb-1 font-secondary">{service.name}</h3>
+                        <div className="text-white/70 text-xs uppercase tracking-wider">{service.category}</div>
                       </div>
-                    )}
-                    {service.usageLimit && (
-                      <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden mb-2">
-                        <div 
-                          className="h-full bg-white/60 rounded-full" 
-                          style={{ width: `${Math.min(percent, 100)}%` }} 
-                        />
+                      <div className="text-3xl font-mono font-bold text-white mb-1">
+                        {service.currency}{service.price.toFixed(2)}
                       </div>
-                    )}
-                    <div className="text-white/80 text-xs">Resets in 4d</div>
-                  </div>
+                      {service.usageCurrent !== undefined && (
+                        <div className="text-white/80 text-sm mb-3">
+                          {service.usageCurrent} {service.usageUnit || ''}
+                        </div>
+                      )}
+                      {service.usageLimit && (
+                        <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden mb-2">
+                          <div 
+                            className="h-full bg-white/60 rounded-full" 
+                            style={{ width: `${Math.min(percent, 100)}%` }} 
+                          />
+                        </div>
+                      )}
+                      <div className="text-white/80 text-xs">Resets in 4d</div>
+                    </div>
+                  </Link>
                 );
               })}
             </div>
