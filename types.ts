@@ -16,6 +16,7 @@ export interface Service {
   connected: boolean;
   slug?: string;
   sortOrder?: number;
+  createdAt?: string;
   transactions?: Transaction[];
 }
 

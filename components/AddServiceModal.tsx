@@ -22,7 +22,7 @@ const POPULAR_SERVICES = [
   { name: 'PlanetScale', logo: '/logos/planetscale.svg', cat: 'Database' },
   { name: 'Neon', logo: '/logos/neon.svg', cat: 'Database' },
   { name: 'Turso', logo: '/logos/turso.svg', cat: 'Database' },
-  { name: 'Supabase', logo: '/logos/supabase.svg', cat: 'Database' },
+  { name: 'Supabase', logo: '/logos/supabase.svg', cat: 'Database', requiresAuth: true },
   { name: 'Convex', logo: '/logos/convex.svg', cat: 'Database' },
   { name: 'Drizzle', logo: '/logos/drizzle.svg', cat: 'Database' },
   
@@ -125,6 +125,12 @@ export default function AddServiceModal({ isOpen, onClose }: AddServiceModalProp
   const handleServiceClick = (service: typeof POPULAR_SERVICES[0]) => {
     setSelectedService(service);
     
+    // Special handling for Supabase OAuth
+    if (service.name === 'Supabase') {
+      window.location.href = '/api/supabase/oauth/initiate';
+      return;
+    }
+
     // If service requires auth, show API form first
     if (service.requiresAuth) {
       setShowApiForm(true);
@@ -274,6 +280,7 @@ export default function AddServiceModal({ isOpen, onClose }: AddServiceModalProp
         connected: false,
         slug: createSlug(manualForm.name.trim()),
         userId: user.id,
+        createdAt: new Date().toISOString(),
       };
 
       const transaction = db.tx.services[serviceId].update(serviceData);

@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Plus, AlertCircle, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import db from '@/lib/instant';
 import SortableServiceCard from '@/components/SortableServiceCard';
 import { useAddServiceModal } from '@/contexts/AddServiceModalContext';
@@ -26,9 +26,22 @@ import {
 
 export default function ServicesList() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [filter, setFilter] = useState('All');
   const { openModal } = useAddServiceModal();
   const { data, isLoading } = db.useQuery({ services: {} });
+  const [error, setError] = useState<string | null>(null);
+
+  // Check for error in URL params (from OAuth callback)
+  useEffect(() => {
+    if (!searchParams) return;
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      setError(decodeURIComponent(errorParam));
+      // Clean up URL
+      router.replace('/services', { scroll: false });
+    }
+  }, [searchParams, router]);
   
   const categories = ['All', 'AI Models', 'Hosting', 'Backend', 'Tools', 'Email', 'Domains'];
 
@@ -137,6 +150,23 @@ export default function ServicesList() {
   return (
     <div className="p-6 md:p-8 overflow-y-auto no-scrollbar">
       <div className="space-y-6">
+        {/* Error Banner */}
+        {error && (
+          <div className="relative bg-red-900/20 border border-red-800/30 rounded-lg p-4 flex items-start gap-3">
+            <AlertCircle className="text-red-400 mt-0.5 flex-shrink-0" size={20} />
+            <div className="flex-1">
+              <h3 className="text-red-400 font-bold text-sm mb-1">Connection Error</h3>
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-400 hover:text-red-300 transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-secondary font-bold">Services</h1>
           <button 

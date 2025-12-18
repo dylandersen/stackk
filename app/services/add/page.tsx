@@ -14,6 +14,7 @@ const getLogo = (domain: string) => `https://logo.clearbit.com/${domain}`;
 
 const POPULAR_SERVICES = [
   { name: 'Vercel', logo: '/logos/vercel.svg', cat: 'Hosting', requiresAuth: true },
+  { name: 'Supabase', logo: '/logos/supabase.svg', cat: 'Database', requiresAuth: true },
   { name: 'GitHub Copilot', logo: getLogo('github.com'), cat: 'Tools' },
   { name: 'Railway', logo: getLogo('railway.app'), cat: 'Hosting' },
   { name: 'AWS', logo: getLogo('aws.amazon.com'), cat: 'Cloud' },
@@ -59,6 +60,12 @@ export default function AddService() {
   const toggleSelect = (name: string) => {
     const service = POPULAR_SERVICES.find(s => s.name === name);
     
+    // Special handling for Supabase OAuth
+    if (service?.requiresAuth && name === 'Supabase') {
+      window.location.href = '/api/supabase/oauth/initiate';
+      return;
+    }
+
     // Special handling for Vercel - show auth form
     if (service?.requiresAuth && name === 'Vercel') {
       if (!showVercelForm) {

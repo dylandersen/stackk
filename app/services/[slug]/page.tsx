@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Calendar, FileText, Settings, RefreshCw, AlertCircle, CheckCircle2, Link2, Link2Off, Server, Clock, BarChart3, Trash2, X } from 'lucide-react';
 import db from '@/lib/instant';
 import { createSlug } from '@/utils/slug';
@@ -9,7 +9,14 @@ import VercelSummaryStats from '@/components/VercelSummaryStats';
 import VercelProjectsTable from '@/components/VercelProjectsTable';
 import DeploymentFrequencyChart from '@/components/charts/DeploymentFrequencyChart';
 import ProjectDistributionChart from '@/components/charts/ProjectDistributionChart';
+import SupabaseSummaryStats from '@/components/SupabaseSummaryStats';
+import SupabaseProjectInfo from '@/components/SupabaseProjectInfo';
+import SupabaseBillingCard from '@/components/SupabaseBillingCard';
+import SupabaseUsageChart from '@/components/charts/SupabaseUsageChart';
+import SupabaseProjectsList from '@/components/SupabaseProjectsList';
+import SupabaseResourcesCard from '@/components/SupabaseResourcesCard';
 import type { VercelDataResponse } from '@/app/api/vercel/data/route';
+import type { SupabaseDataResponse } from '@/app/api/supabase/data/route';
 
 export default function ServiceDetail() {
   const paramsResult = useParams();
@@ -17,15 +24,18 @@ export default function ServiceDetail() {
     ? React.use(paramsResult)
     : (paramsResult as Record<string, string | string[]> | null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const slug = params?.slug as string | undefined;
   const { data, isLoading } = db.useQuery({ services: {} });
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [vercelData, setVercelData] = useState<VercelDataResponse | null>(null);
+  const [supabaseData, setSupabaseData] = useState<SupabaseDataResponse | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const hasAutoRefreshed = useRef(false);
   
   const service = useMemo(() => {
     if (!data?.services) return null;
@@ -39,6 +49,7 @@ export default function ServiceDetail() {
   }, [data, slug]);
 
   const isVercelService = service?.name === 'Vercel' && service?.connected && service?.vercelTokenHash;
+  const isSupabaseService = service?.name === 'Supabase' && service?.connected && service?.supabaseTokenHash;
 
   // Redirect if service doesn't exist
   useEffect(() => {
@@ -46,6 +57,17 @@ export default function ServiceDetail() {
       router.push('/services');
     }
   }, [isLoading, data, service, router]);
+
+  // Get Supabase projects from service
+  const supabaseProjects = useMemo(() => {
+    if (!service?.supabaseProjects) return [];
+    try {
+      return JSON.parse(service.supabaseProjects);
+    } catch (error) {
+      console.error('Error parsing Supabase projects:', error);
+      return [];
+    }
+  }, [service?.supabaseProjects]);
 
   // Load cached data on mount
   useEffect(() => {
@@ -57,10 +79,29 @@ export default function ServiceDetail() {
         console.error('Error parsing cached Vercel data:', error);
       }
     }
-  }, [service?.vercelDataCache, service?.vercelDataFetchedAt]);
+    if (service?.supabaseDataCache && service?.supabaseDataFetchedAt) {
+      try {
+        const cachedData = JSON.parse(service.supabaseDataCache);
+        setSupabaseData(cachedData);
+      } catch (error) {
+        console.error('Error parsing cached Supabase data:', error);
+      }
+    }
+  }, [service?.vercelDataCache, service?.vercelDataFetchedAt, service?.supabaseDataCache, service?.supabaseDataFetchedAt]);
+
 
   const handleSync = async () => {
-    if (!service || !isVercelService || !service.vercelTokenHash) return;
+    if (!service) return;
+    
+    if (isVercelService && service.vercelTokenHash) {
+      await handleVercelSync();
+    } else if (isSupabaseService && service.supabaseTokenHash) {
+      await handleSupabaseSync();
+    }
+  };
+
+  const handleVercelSync = async () => {
+    if (!service || !service.vercelTokenHash) return;
 
     setIsSyncing(true);
     setSyncError(null);
@@ -111,6 +152,67 @@ export default function ServiceDetail() {
       setSyncError(error.message || 'Failed to sync data');
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleSupabaseSync = async () => {
+    if (!service || !service.supabaseTokenHash) return;
+
+    setIsSyncing(true);
+    setSyncError(null);
+
+    try {
+      // Get the first project ref from supabaseProjects
+      let projectRef: string | undefined;
+      if (service.supabaseProjects) {
+        try {
+          const projects = JSON.parse(service.supabaseProjects);
+          if (Array.isArray(projects) && projects.length > 0) {
+            projectRef = projects[0].ref;
+          }
+        } catch (error) {
+          console.error('Error parsing Supabase projects for sync:', error);
+        }
+      }
+
+      if (!projectRef) {
+        throw new Error('No Supabase project found to sync');
+      }
+
+      const response = await fetch('/api/supabase/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          serviceId: service.id,
+          encryptedToken: service.supabaseTokenHash,
+          encryptedRefreshToken: service.supabaseRefreshTokenHash,
+          projectRef: projectRef,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to sync Supabase');
+      }
+
+      const transaction = db.tx.services[service.id].update(result.updates);
+      db.transact(transaction);
+    } catch (error: any) {
+      console.error('Error syncing Supabase:', error);
+      setSyncError(error.message || 'Failed to sync Supabase');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const fetchData = async () => {
+    if (isVercelService) {
+      await fetchVercelData();
+    } else if (isSupabaseService) {
+      await fetchSupabaseData();
     }
   };
 
@@ -180,22 +282,121 @@ export default function ServiceDetail() {
     }
   };
 
-  const handleDisconnect = async () => {
-    if (!service || !isVercelService) return;
+  const fetchSupabaseData = async () => {
+    if (!service || !isSupabaseService || !service.supabaseTokenHash) return;
 
-    if (!confirm('Are you sure you want to disconnect your Vercel account? This will remove all connection data.')) {
+    setIsLoadingData(true);
+    setDataError(null);
+
+    // Get all project refs from the service
+    const projectRefs = supabaseProjects.map((p: any) => p.ref);
+    if (projectRefs.length === 0) {
+      setDataError('No projects connected');
+      setIsLoadingData(false);
       return;
     }
 
     try {
-      const response = await fetch('/api/vercel/disconnect', {
+      const response = await fetch('/api/supabase/data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           serviceId: service.id,
+          encryptedToken: service.supabaseTokenHash,
+          encryptedRefreshToken: service.supabaseRefreshTokenHash,
+          projectRefs: projectRefs, // Send all project refs
         }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch Supabase data');
+      }
+
+      setSupabaseData(result.data);
+
+      // Persist to DB - save ALL data including plan, billing, project details, etc.
+      const updates: any = {
+        supabaseDataCache: JSON.stringify(result.data),
+        supabaseDataFetchedAt: new Date().toISOString(),
+      };
+
+      // Save plan information if available
+      if (result.data?.billing?.plan) {
+        updates.supabasePlan = result.data.billing.plan.toLowerCase();
+      }
+
+      // Update price based on plan
+      const planName = result.data?.billing?.plan?.toLowerCase() || 'free';
+      const planPricing: Record<string, number> = {
+        free: 0,
+        pro: 25,
+        team: 599,
+        enterprise: 0,
+      };
+      if (planPricing[planName] !== undefined) {
+        updates.price = planPricing[planName];
+      }
+
+      if (result.newTokens) {
+        updates.supabaseTokenHash = result.newTokens.accessToken;
+        updates.supabaseRefreshTokenHash = result.newTokens.refreshToken;
+      }
+
+      const transaction = db.tx.services[service.id].update(updates);
+      db.transact(transaction);
+    } catch (error: any) {
+      console.error('Error fetching Supabase data:', error);
+      setDataError(error.message || 'Failed to fetch Supabase data');
+    } finally {
+      setIsLoadingData(false);
+    }
+  };
+
+  // Auto-refresh on first connection or when autoRefresh query param is present
+  useEffect(() => {
+    if (!service || isLoading || isLoadingData || hasAutoRefreshed.current || !isSupabaseService || !searchParams) return;
+    
+    const shouldAutoRefresh = searchParams.get('autoRefresh') === 'true';
+    const hasNoCachedData = !service.supabaseDataCache;
+    
+    if (shouldAutoRefresh || hasNoCachedData) {
+      hasAutoRefreshed.current = true;
+      // Remove query param from URL
+      if (shouldAutoRefresh) {
+        router.replace(`/services/${slug}`, { scroll: false });
+      }
+      // Trigger data fetch
+      console.log('[Supabase] Auto-refreshing data on first connection');
+      fetchSupabaseData();
+    }
+    // Note: fetchSupabaseData is intentionally not in deps - it's stable and uses current state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [service, isLoading, isSupabaseService, searchParams, slug, router, isLoadingData]);
+
+  const handleDisconnect = async () => {
+    if (!service || (!isVercelService && !isSupabaseService)) return;
+
+    const provider = isVercelService ? 'Vercel' : 'Supabase';
+    if (!confirm(`Are you sure you want to disconnect your ${provider} account? This will remove all connection data.`)) {
+      return;
+    }
+
+    try {
+      const endpoint = isVercelService ? '/api/vercel/disconnect' : '/api/supabase/disconnect';
+      const body = isVercelService 
+        ? { serviceId: service.id }
+        : { serviceId: service.id, encryptedRefreshToken: service.supabaseRefreshTokenHash };
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
       });
 
       const result = await response.json();
@@ -210,11 +411,12 @@ export default function ServiceDetail() {
       
       // Clear local state
       setVercelData(null);
+      setSupabaseData(null);
       
       router.push('/services');
     } catch (error: any) {
-      console.error('Error disconnecting Vercel:', error);
-      alert(error.message || 'Failed to disconnect Vercel account');
+      console.error(`Error disconnecting ${provider}:`, error);
+      alert(error.message || `Failed to disconnect ${provider} account`);
     }
   };
 
@@ -283,6 +485,12 @@ export default function ServiceDetail() {
                 <span className="text-xs font-medium text-primary">Connected</span>
               </div>
             )}
+            {isSupabaseService && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 rounded-full">
+                <Link2 size={14} className="text-green-400" />
+                <span className="text-xs font-medium text-green-400">Connected</span>
+              </div>
+            )}
           </div>
           <button 
             onClick={() => setShowSettingsModal(true)}
@@ -322,21 +530,26 @@ export default function ServiceDetail() {
               <h3 className="text-white font-bold text-base md:text-lg whitespace-nowrap font-secondary">{service.name}</h3>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="bg-black/20 backdrop-blur-md px-3 py-1 rounded-full text-white font-bold font-mono text-sm md:text-base border border-white/10 whitespace-nowrap">
+              <span className="bg-black/30 backdrop-blur-md px-3 py-1 rounded-full text-white font-bold font-mono text-sm md:text-base border border-white/20 whitespace-nowrap shadow-lg">
                 {service.currency}{service.price}
-                <span className="text-white/60 text-xs font-normal ml-1">/{service.billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                <span className="text-white/70 text-xs font-normal ml-1">/{service.billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
               </span>
               {isVercelService && (service as any).vercelPlan && (
-                <span className="px-3 py-1 rounded-full text-blue-400 font-bold text-xs md:text-sm border border-blue-500/30 whitespace-nowrap capitalize">
+                <span className="px-3 py-1 rounded-full bg-black/30 backdrop-blur-md text-blue-300 font-bold text-xs md:text-sm border border-blue-400/40 whitespace-nowrap capitalize shadow-lg">
                   {(service as any).vercelPlan}
                 </span>
               )}
-              {isVercelService && (
+              {isSupabaseService && supabaseData && (
+                <span className="px-3 py-1 rounded-full bg-black/30 backdrop-blur-md text-green-300 font-bold text-xs md:text-sm border border-green-400/40 whitespace-nowrap capitalize shadow-lg">
+                  {supabaseData.billing.plan} Plan
+                </span>
+              )}
+              {(isVercelService || isSupabaseService) && (
                 <>
                   <button
-                    onClick={fetchVercelData}
+                    onClick={fetchData}
                     disabled={isLoadingData || isSyncing}
-                    className="flex items-center gap-2 px-3 py-1 bg-black/20 backdrop-blur-md rounded-full text-white font-bold text-xs md:text-sm border border-primary/30 hover:border-primary/50 disabled:bg-surface disabled:text-text-secondary disabled:border-border transition-all whitespace-nowrap flex-shrink-0"
+                    className="flex items-center gap-2 px-3 py-1 bg-black/30 backdrop-blur-md rounded-full text-white font-bold text-xs md:text-sm border border-white/20 hover:border-white/30 disabled:bg-surface disabled:text-text-secondary disabled:border-border transition-all whitespace-nowrap flex-shrink-0 shadow-lg"
                   >
                     <RefreshCw size={14} className={(isLoadingData || isSyncing) ? 'animate-spin' : ''} />
                     {isLoadingData ? 'Loading...' : 'Refresh Data'}
@@ -348,7 +561,7 @@ export default function ServiceDetail() {
         </div>
 
         {/* Error Messages */}
-        {isVercelService && (
+        {(isVercelService || isSupabaseService) && (
           <>
             {(service.syncError || syncError) && (
               <div className="flex items-start gap-2 p-3 bg-red-900/20 border border-red-800/30 rounded-lg">
@@ -372,8 +585,81 @@ export default function ServiceDetail() {
           </>
         )}
 
-        {/* Vercel-specific content */}
-        {isVercelService ? (
+        {/* Supabase-specific content */}
+        {isSupabaseService ? (
+          <>
+            {/* Summary Statistics - Show if we have data */}
+            {supabaseData && supabaseData.statistics && (
+              <SupabaseSummaryStats statistics={supabaseData.statistics} />
+            )}
+
+            {/* Loading State */}
+            {isLoadingData && !supabaseData && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                  {[1, 2, 3, 4].map(i => (
+                    <div key={i} className="bg-surface border border-border rounded-card p-6 animate-pulse">
+                      <div className="h-4 bg-background rounded w-1/2 mb-4"></div>
+                      <div className="h-8 bg-background rounded w-1/3"></div>
+                    </div>
+                  ))}
+                </div>
+                <div className="h-64 bg-surface border border-border rounded-card animate-pulse"></div>
+                <div className="h-96 bg-surface border border-border rounded-card animate-pulse"></div>
+              </div>
+            )}
+
+            {/* Projects List - Always show if projects exist */}
+            {supabaseProjects.length > 0 && (
+              <SupabaseProjectsList projects={supabaseProjects} />
+            )}
+
+            {/* Main Content */}
+            {supabaseData && (
+              <div className="space-y-8">
+                {supabaseData.billing && (
+                  <SupabaseBillingCard 
+                    billing={supabaseData.billing} 
+                    projectRef={supabaseProjects[0]?.ref || ''} 
+                  />
+                )}
+                
+                {/* Resources & Services */}
+                <SupabaseResourcesCard
+                  edgeFunctions={supabaseData.edgeFunctions}
+                  storageBuckets={supabaseData.storageBuckets}
+                  branches={supabaseData.branches}
+                  billingAddons={supabaseData.billing?.addons}
+                />
+                
+                <section className="relative bg-surface border border-border rounded-card p-6 md:p-8 overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-6">
+                      <BarChart3 size={20} className="text-green-400" />
+                      <h2 className="font-bold text-white text-lg md:text-xl font-secondary">Usage Overview</h2>
+                    </div>
+                    <SupabaseUsageChart color={service.color} />
+                  </div>
+                </section>
+
+                {supabaseData.project && (
+                  <SupabaseProjectInfo project={supabaseData.project} organization={supabaseData.organization} />
+                )}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoadingData && !supabaseData && !dataError && (
+              <div className="relative bg-surface border border-border rounded-card p-8 text-center overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none"></div>
+                <div className="relative z-10">
+                  <p className="text-text-secondary mb-4">Click "Refresh Data" to load your Supabase project details</p>
+                </div>
+              </div>
+            )}
+          </>
+        ) : isVercelService ? (
           <>
             {/* Summary Statistics */}
             {vercelData && (

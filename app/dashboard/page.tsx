@@ -68,55 +68,61 @@ export default function Dashboard() {
         {topService && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             {/* Service Usage Card */}
-            <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-700/30 border border-slate-700/50 relative">
+            <div className="h-full min-h-[240px] p-6 rounded-2xl bg-gradient-to-br from-slate-800/50 to-slate-700/30 border border-slate-700/50 relative flex flex-col">
               <div className="absolute top-4 right-4 text-white font-mono font-bold text-lg">
                 {topService.usageCurrent && topService.usageLimit 
                   ? `${Math.round((topService.usageCurrent / topService.usageLimit) * 100)}%`
                   : '0%'}
               </div>
-              <div className="text-text-secondary text-xs font-medium uppercase tracking-wider mb-2">
-                {topService.name} {topService.usageMetric}
+              <div className="flex-1 flex flex-col">
+                <div className="text-text-secondary text-xs font-medium uppercase tracking-wider mb-2">
+                  {topService.name} {topService.usageMetric}
+                </div>
+                <div className="text-4xl font-mono font-bold text-white mb-2">
+                  {topService.usageCurrent?.toLocaleString()} {topService.usageUnit || ''}
+                </div>
+                <div className="text-text-secondary text-sm mb-3">
+                  Limit: {topService.usageLimit?.toLocaleString()} {topService.usageUnit || ''}
+                </div>
+                <div className="mt-auto">
+                  <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden mb-2">
+                    <div 
+                      className="h-full bg-slate-400/60 rounded-full" 
+                      style={{ 
+                        width: topService.usageCurrent && topService.usageLimit 
+                          ? `${Math.min((topService.usageCurrent / topService.usageLimit) * 100, 100)}%`
+                          : '0%'
+                      }} 
+                    />
+                  </div>
+                  <div className="text-text-secondary text-xs text-right">Resets in 8d</div>
+                </div>
               </div>
-              <div className="text-4xl font-mono font-bold text-white mb-2">
-                {topService.usageCurrent?.toLocaleString()} {topService.usageUnit || ''}
-              </div>
-              <div className="text-text-secondary text-sm mb-3">
-                Limit: {topService.usageLimit?.toLocaleString()} {topService.usageUnit || ''}
-              </div>
-              <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden mb-2">
-                <div 
-                  className="h-full bg-slate-400/60 rounded-full" 
-                  style={{ 
-                    width: topService.usageCurrent && topService.usageLimit 
-                      ? `${Math.min((topService.usageCurrent / topService.usageLimit) * 100, 100)}%`
-                      : '0%'
-                  }} 
-                />
-              </div>
-              <div className="text-text-secondary text-xs mt-2 text-right">Resets in 8d</div>
             </div>
 
           {/* Projected Overage Alert Card */}
-          <div className="p-6 rounded-2xl bg-orange-900/30 border border-orange-800/30 relative">
+          <div className="h-full min-h-[240px] p-6 rounded-2xl bg-orange-900/30 border border-orange-800/30 relative flex flex-col">
             <div className="absolute top-4 right-4">
               <span className="text-xs font-bold text-orange-400 bg-orange-900/50 px-2 py-1 rounded uppercase">Action Required</span>
             </div>
-            <div className="flex items-start gap-3 mb-4">
-              <div className="p-2 rounded-lg bg-yellow-500/20">
-                <AlertTriangle size={20} className="text-yellow-500" />
+            <div className="flex-1 flex flex-col">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-yellow-500/20 flex-shrink-0">
+                  <AlertTriangle size={20} className="text-yellow-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold mb-1">Projected Overage</h3>
+                  <p className="text-text-secondary text-sm">Vercel usage at 90%. Limit in ~2 days.</p>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="text-white font-semibold mb-1">Projected Overage</h3>
-                <p className="text-text-secondary text-sm">Vercel usage at 90%. Limit in ~2 days.</p>
+              <div className="mt-auto flex gap-3">
+                <button className="flex-1 bg-white text-background px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/90 transition-colors">
+                  Check Usage
+                </button>
+                <button className="flex-1 bg-white/10 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/20 transition-colors">
+                  Dismiss
+                </button>
               </div>
-            </div>
-            <div className="flex gap-3 mt-4">
-              <button className="flex-1 bg-white text-background px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/90 transition-colors">
-                Check Usage
-              </button>
-              <button className="flex-1 bg-white/10 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-white/20 transition-colors">
-                Dismiss
-              </button>
             </div>
           </div>
           </div>
@@ -153,42 +159,57 @@ export default function Dashboard() {
                   <Link 
                     key={service.id}
                     href={`/services/${serviceSlug}`}
-                    className="block"
+                    className="block h-full"
                   >
                     <div 
-                      className="p-6 rounded-2xl relative cursor-pointer hover:opacity-90 transition-opacity"
+                      className="h-full min-h-[280px] p-6 rounded-2xl relative cursor-pointer hover:opacity-90 transition-opacity flex flex-col"
                       style={{ backgroundColor: service.color || '#1A1A1C', border: service.color ? 'none' : '1px solid #2A2A2E' }}
                     >
-                      {isCritical && (
-                        <div className="absolute top-4 right-4">
-                          <span className="text-xs font-bold text-red-400 bg-red-900/50 px-2 py-1 rounded uppercase">Critical</span>
+                      {/* Background noise texture overlay */}
+                      <div className="absolute inset-0 opacity-10 pointer-events-none rounded-2xl" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+                      
+                      <div className="relative z-10 flex-1 flex flex-col">
+                        {/* Top section with badge and percentage */}
+                        <div className="flex justify-between items-start mb-4">
+                          {isCritical && (
+                            <span className="text-xs font-bold text-red-400 bg-red-900/50 px-2 py-1 rounded uppercase">Critical</span>
+                          )}
+                          {!isCritical && <div></div>}
+                          <div className="text-white font-mono font-bold text-lg">
+                            {Math.round(percent)}%
+                          </div>
                         </div>
-                      )}
-                      <div className={`absolute ${isCritical ? 'top-12' : 'top-4'} right-4 text-white font-mono font-bold`}>
-                        {Math.round(percent)}%
-                      </div>
-                      <div className="mb-4">
-                        <Zap size={24} className="text-white mb-2" />
-                        <h3 className="text-white font-semibold text-lg mb-1 font-secondary">{service.name}</h3>
-                        <div className="text-white/70 text-xs uppercase tracking-wider">{service.category}</div>
-                      </div>
-                      <div className="text-3xl font-mono font-bold text-white mb-1">
-                        {service.currency}{service.price.toFixed(2)}
-                      </div>
-                      {service.usageCurrent !== undefined && (
-                        <div className="text-white/80 text-sm mb-3">
-                          {service.usageCurrent} {service.usageUnit || ''}
+                        
+                        {/* Icon and service info */}
+                        <div className="mb-4 flex-shrink-0">
+                          <Zap size={24} className="text-white mb-2" />
+                          <h3 className="text-white font-semibold text-lg mb-1 font-secondary">{service.name}</h3>
+                          <div className="text-white/70 text-xs uppercase tracking-wider">{service.category}</div>
                         </div>
-                      )}
-                      {service.usageLimit && (
-                        <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden mb-2">
-                          <div 
-                            className="h-full bg-white/60 rounded-full" 
-                            style={{ width: `${Math.min(percent, 100)}%` }} 
-                          />
+                        
+                        {/* Price */}
+                        <div className="text-3xl font-mono font-bold text-white mb-3 flex-shrink-0">
+                          {service.currency}{service.price.toFixed(2)}
                         </div>
-                      )}
-                      <div className="text-white/80 text-xs">Resets in 4d</div>
+                        
+                        {/* Usage info */}
+                        <div className="flex-1 flex flex-col justify-end">
+                          {service.usageCurrent !== undefined && (
+                            <div className="text-white/80 text-sm mb-2">
+                              {service.usageCurrent} {service.usageUnit || ''}
+                            </div>
+                          )}
+                          {service.usageLimit && (
+                            <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden mb-2">
+                              <div 
+                                className="h-full bg-white/60 rounded-full" 
+                                style={{ width: `${Math.min(percent, 100)}%` }} 
+                              />
+                            </div>
+                          )}
+                          <div className="text-white/80 text-xs">Resets in 4d</div>
+                        </div>
+                      </div>
                     </div>
                   </Link>
                 );

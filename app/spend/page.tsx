@@ -188,15 +188,21 @@ export default function SpendPage() {
                     <div className="bg-surface border border-border rounded-card p-5 md:p-6 hover:bg-surface/80 transition-colors cursor-pointer group">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0">
-                            <img 
-                              src={service.logo} 
-                              alt={service.name} 
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = '/stackk.png';
-                              }}
-                            />
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-white/10 flex items-center justify-center">
+                            {service.logo ? (
+                              <img 
+                                src={service.logo} 
+                                alt={service.name} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = '/stackk.png';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-white font-bold text-lg">
+                                {service.name.charAt(0).toUpperCase()}
+                              </span>
+                            )}
                           </div>
                           <div>
                             <h3 className="font-bold text-white text-lg mb-1">{service.name}</h3>

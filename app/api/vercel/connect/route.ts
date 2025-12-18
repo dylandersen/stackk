@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       connected: true,
       slug: 'vercel',
       userId,
+      createdAt: new Date().toISOString(),
       // Vercel-specific fields
       vercelTokenHash: encryptedToken,
       vercelUserId: usageData.userId,
