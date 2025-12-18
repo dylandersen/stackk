@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
-  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID;
+  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID?.trim();
 
   if (!clientId) {
     return NextResponse.json(

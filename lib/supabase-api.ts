@@ -255,8 +255,8 @@ export async function exchangeSupabaseCode(
   expires_in: number;
   token_type: string;
 }> {
-  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.SUPABASE_OAUTH_CLIENT_SECRET;
+  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID?.trim();
+  const clientSecret = process.env.SUPABASE_OAUTH_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     throw new Error('Supabase OAuth credentials not configured');
@@ -296,8 +296,8 @@ export async function refreshSupabaseToken(refreshToken: string): Promise<{
   expires_in: number;
   token_type: string;
 }> {
-  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.SUPABASE_OAUTH_CLIENT_SECRET;
+  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID?.trim();
+  const clientSecret = process.env.SUPABASE_OAUTH_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     throw new Error('Supabase OAuth credentials not configured');
@@ -330,8 +330,8 @@ export async function refreshSupabaseToken(refreshToken: string): Promise<{
  * Revoke Supabase OAuth tokens
  */
 export async function revokeSupabaseToken(refreshToken: string): Promise<void> {
-  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID;
-  const clientSecret = process.env.SUPABASE_OAUTH_CLIENT_SECRET;
+  const clientId = process.env.SUPABASE_OAUTH_CLIENT_ID?.trim();
+  const clientSecret = process.env.SUPABASE_OAUTH_CLIENT_SECRET?.trim();
 
   if (!clientId || !clientSecret) {
     throw new Error('Supabase OAuth credentials not configured');
