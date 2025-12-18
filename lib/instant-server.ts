@@ -10,8 +10,8 @@ function getDb() {
     return dbInstance;
   }
 
-  const appId = process.env.NEXT_PUBLIC_INSTANT_APP_ID;
-  const adminToken = process.env.INSTANT_APP_ADMIN_TOKEN;
+  const appId = process.env.NEXT_PUBLIC_INSTANT_APP_ID?.trim();
+  const adminToken = process.env.INSTANT_APP_ADMIN_TOKEN?.trim();
 
   if (!appId) {
     throw new Error("NEXT_PUBLIC_INSTANT_APP_ID is not set");
