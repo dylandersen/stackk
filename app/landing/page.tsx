@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import Link from 'next/link';
-import { 
-  Wallet, ArrowRight, Terminal, PlayCircle, BarChart2, 
-  ShieldCheck, Zap, GitBranch, Activity, Code2, 
+import {
+  Wallet, ArrowRight, Terminal, PlayCircle, BarChart2,
+  ShieldCheck, Zap, GitBranch, Activity, Code2,
   AlertTriangle, LayoutGrid, Layers, Bell, Settings,
-  Plus, ChevronRight, Github, Twitter, Linkedin
+  Plus, ChevronRight, Github, Twitter, Linkedin, Menu, X
 } from 'lucide-react';
 
 const MotionDiv = motion.div;
 const MotionSection = motion.section;
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -66,12 +67,12 @@ export default function LandingPage() {
 
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-              <Wallet size={20} strokeWidth={2} />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 group">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
+              <Wallet size={18} className="sm:w-5 sm:h-5" strokeWidth={2} />
             </div>
-            <span className="font-secondary font-semibold text-xl tracking-tight text-white">Stackk</span>
+            <span className="font-secondary font-semibold text-lg sm:text-xl tracking-tight text-white">Stackk</span>
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-text-secondary">
@@ -80,34 +81,91 @@ export default function LandingPage() {
             <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <Link href="/" className="hidden md:block text-sm font-medium text-text-secondary hover:text-white transition-colors">
               Sign in
             </Link>
-            <Link href="/services/add" className="relative group">
+            <Link href="/services/add" className="relative group hidden sm:block">
               <div className="absolute -inset-0.5 bg-gradient-to-r from-primary to-orange-500 rounded-xl blur opacity-30 group-hover:opacity-60 transition duration-200" />
               <div className="relative flex items-center gap-2 bg-primary hover:bg-primary-hover text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all">
                 <span>Get Started</span>
                 <ArrowRight size={16} />
               </div>
             </Link>
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-text-secondary hover:text-white transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="md:hidden border-t border-white/5 bg-background/95 backdrop-blur-lg"
+          >
+            <div className="px-4 py-6 space-y-4">
+              <a
+                href="#features"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-text-secondary hover:text-white transition-colors py-2 text-base font-medium"
+              >
+                Features
+              </a>
+              <a
+                href="#integrations"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-text-secondary hover:text-white transition-colors py-2 text-base font-medium"
+              >
+                Integrations
+              </a>
+              <a
+                href="#pricing"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block text-text-secondary hover:text-white transition-colors py-2 text-base font-medium"
+              >
+                Pricing
+              </a>
+              <div className="border-t border-white/5 pt-4 space-y-3">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-text-secondary hover:text-white transition-colors py-2 text-base font-medium"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/services/add"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full bg-primary hover:bg-primary-hover text-white text-center font-semibold px-6 py-3 rounded-xl transition-all"
+                >
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </nav>
 
       {/* Main Content */}
-      <main className="relative pt-32 pb-20">
+      <main className="relative pt-20 sm:pt-28 md:pt-32 pb-12 sm:pb-16 md:pb-20">
         {/* Hero Section */}
-        <div className="max-w-7xl mx-auto px-6" ref={heroRef}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6" ref={heroRef}>
           <MotionDiv
             style={{ opacity, scale }}
-            className="flex flex-col items-center text-center max-w-4xl mx-auto mb-20"
+            className="flex flex-col items-center text-center max-w-4xl mx-auto mb-12 sm:mb-16 md:mb-20"
           >
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-white/5 text-xs font-mono text-primary mb-8"
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface border border-white/5 text-xs font-mono text-primary mb-6 sm:mb-8"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
@@ -120,7 +178,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-5xl md:text-7xl font-primary font-black tracking-tight leading-[1.1] mb-6 text-white"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-primary font-black tracking-tight leading-[1.1] mb-4 sm:mb-6 text-white px-4"
             >
               What's your stack <span className="text-gradient-primary"><em>actually</em> costing you?</span>
             </motion.h1>
@@ -129,7 +187,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed"
+              className="text-base sm:text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed px-4"
             >
               Your side projects shouldn't come with surprise bills. Connect your stack, see real-time costs, and get alerts before you cross free tier limits.
             </motion.p>
@@ -138,16 +196,16 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto px-4"
             >
               <Link
                 href="/services/add"
-                className="flex items-center justify-center gap-2 bg-white text-background px-8 py-4 rounded-xl font-bold text-sm hover:scale-[1.02] transition-transform"
+                className="flex items-center justify-center gap-2 bg-white text-background px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base hover:scale-[1.02] transition-transform active:scale-95"
               >
                 <Terminal size={18} />
                 Start Tracking
               </Link>
-              <button className="flex items-center justify-center gap-2 bg-surface border border-border text-text-secondary hover:text-white hover:border-white/20 px-8 py-4 rounded-xl font-semibold text-sm transition-all">
+              <button className="flex items-center justify-center gap-2 bg-surface border border-border text-text-secondary hover:text-white hover:border-white/20 px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl font-semibold text-sm sm:text-base transition-all active:scale-95">
                 <PlayCircle size={18} />
                 Watch Demo
               </button>
@@ -163,7 +221,7 @@ export default function LandingPage() {
           >
             <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full opacity-50" />
 
-            <div className="relative bg-[#0A0A0B] border border-border rounded-2xl shadow-2xl overflow-hidden transform group-hover:rotate-x-2 transition-transform duration-700 ease-out h-[600px] md:h-[700px] flex">
+            <div className="relative bg-[#0A0A0B] border border-border rounded-xl sm:rounded-2xl shadow-2xl overflow-hidden transform group-hover:rotate-x-2 transition-transform duration-700 ease-out h-[500px] sm:h-[600px] md:h-[700px] flex">
               {/* Sidebar */}
               <div className="hidden md:flex flex-col w-64 border-r border-border bg-surface/50 backdrop-blur-xl p-4">
                 <div className="flex items-center gap-2 mb-8 px-2">
@@ -226,9 +284,9 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="p-6 md:p-8 overflow-y-auto no-scrollbar">
+                <div className="p-4 sm:p-6 md:p-8 overflow-y-auto no-scrollbar">
                   {/* Stats Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
                     <div className="p-5 rounded-2xl bg-surface border border-border group hover:border-primary/50 transition-colors">
                       <div className="flex justify-between items-start mb-4">
                         <div className="p-2 rounded-lg bg-green-500/10 text-green-500">
@@ -262,7 +320,7 @@ export default function LandingPage() {
                   </div>
 
                   {/* Service Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {[
                       { name: 'Vercel Pro', price: '$20', color: '#000000', usage: '85/100 GB' },
                       { name: 'OpenAI API', price: '$84.20', color: '#10A37F', usage: '84.20/120 $' },
@@ -310,17 +368,17 @@ export default function LandingPage() {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true, margin: '-100px' }}
-          className="max-w-7xl mx-auto px-6 mt-32"
+          className="max-w-7xl mx-auto px-4 sm:px-6 mt-16 sm:mt-24 md:mt-32"
           id="features"
         >
           <motion.h2
             variants={itemVariants}
-            className="text-3xl font-primary font-bold text-center mb-16"
+            className="text-2xl sm:text-3xl md:text-4xl font-primary font-bold text-center mb-10 sm:mb-12 md:mb-16 px-4"
           >
             Everything you need to <span className="text-gradient-primary">manage subscriptions</span>
           </motion.h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {[
               {
                 icon: BarChart2,
@@ -369,8 +427,8 @@ export default function LandingPage() {
         </MotionSection>
 
         {/* Integrations Section */}
-        <div className="max-w-7xl mx-auto px-6 mt-32" id="integrations">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[600px] md:h-[500px]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 mt-16 sm:mt-24 md:mt-32" id="integrations">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 min-h-[500px] md:h-[500px]">
             <div className="md:col-span-2 flashlight-card p-0 relative group">
               <div className="absolute inset-0 bg-noise opacity-20 pointer-events-none" />
               <div className="p-8 relative z-10">
@@ -421,14 +479,14 @@ export default function LandingPage() {
         </div>
 
         {/* CTA Section */}
-        <div className="max-w-3xl mx-auto px-6 mt-32 text-center">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 mt-16 sm:mt-24 md:mt-32 text-center">
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-primary font-black text-white mb-8"
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-primary font-black text-white mb-6 sm:mb-8 px-4"
           >
-            Ready to take control of your <br />
+            Ready to take control of your <br className="hidden sm:block" />
             <span className="text-gradient-primary">developer subscriptions?</span>
           </motion.h2>
           <motion.div
@@ -436,15 +494,15 @@ export default function LandingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 px-4"
           >
             <Link
               href="/services/add"
-              className="bg-primary hover:bg-primary-hover text-white px-8 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/25 transition-all w-full sm:w-auto"
+              className="bg-primary hover:bg-primary-hover text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl font-bold text-sm sm:text-base shadow-lg shadow-primary/25 transition-all active:scale-95 w-full sm:w-auto"
             >
               Get Started for Free
             </Link>
-            <div className="text-text-secondary text-sm font-mono">
+            <div className="text-text-secondary text-xs sm:text-sm font-mono">
               <span className="text-primary">{'>'}</span> Track your first service
             </div>
           </motion.div>
@@ -453,8 +511,8 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-white/5 bg-[#050506]">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10 md:py-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 mb-8 sm:mb-10 md:mb-12">
             <div className="col-span-2 md:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-white">
